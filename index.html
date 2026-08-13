@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HDIR - Catat Kehadiran Online</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.1/dist/jspdf.plugin.autotable.min.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy: { 50:'#eef2f9',100:'#d7e1f2',500:'#1e3a5f',600:'#16304f',700:'#102340',800:'#0b1a30',900:'#071224' },
+          emerald: { 50:'#ecfdf5',100:'#d1fae5',500:'#10b981',600:'#059669',700:'#047857' }
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body { font-family: 'Segoe UI', Roboto, sans-serif; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .step { display: none; }
+  .step.active { display: block; }
+  #qr-reader video { border-radius: 0.75rem; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; }
+  .spinner { border: 3px solid #e5e7eb; border-top-color: #10b981; border-radius: 50%; width: 1.25rem; height: 1.25rem; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col">
+
+<!-- ================= HEADER / NAVBAR ================= -->
+<header class="bg-navy-700 text-white shadow-md sticky top-0 z-40">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2 cursor-pointer" onclick="showView('landing')">
+      <div class="bg-emerald-500 rounded-lg w-9 h-9 flex items-center justify-center font-bold text-navy-900">H</div>
+      <span class="font-bold text-lg tracking-wide">HDIR</span>
+    </div>
+    <div id="digital-clock" class="text-sm font-mono bg-navy-800/60 px-3 py-1.5 rounded-lg"></div>
+  </div>
+</header>
+
+<!-- Toast -->
+<div id="toast" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+<!-- Global Loading Overlay -->
+<div id="global-loading" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+  <div class="bg-white rounded-xl px-6 py-4 flex items-center gap-3 shadow-xl">
+    <div class="spinner"></div>
+    <span class="text-navy-700 font-medium" id="global-loading-text">Memproses...</span>
+  </div>
+</div>
+
+<main class="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
+
+  <!-- ================= LANDING VIEW ================= -->
+  <section id="view-landing" class="view active">
+    <div class="text-center py-14">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-navy-800 mb-3">HDIR - Catat Kehadiran Online</h1>
+      <p class="text-slate-500 mb-10">Presensi cepat, akurat, dan berbasis lokasi.</p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <button onclick="startAbsensiFlow()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-8 py-4 rounded-xl shadow-lg transition">
+          📷 Presensi / Absensi
+        </button>
+        <button onclick="showView('riwayat')" class="bg-white border border-slate-300 hover:bg-slate-100 text-navy-700 font-semibold px-8 py-4 rounded-xl shadow transition">
+          🕘 Cek Riwayat Saya
+        </button>
+        <button onclick="showView('adminLogin')" class="bg-navy-700 hover:bg-navy-800 text-white font-semibold px-8 py-4 rounded-xl shadow-lg transition">
+          🔐 Login Admin
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FORM ABSENSI VIEW ================= -->
+  <section id="view-absensi" class="view">
+    <div class="max-w-lg mx-auto bg-white rounded-2xl shadow p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold text-navy-800">Presensi</h2>
+        <button onclick="resetAbsensiFlow(); showView('landing')" class="text-slate-400 hover:text-slate-600 text-sm">✕ Batal</button>
+      </div>
+
+      <!-- Step indicator -->
+      <div class="flex items-center gap-2 mb-6 text-xs">
+        <span id="ind-1" class="step-ind flex-1 h-1.5 rounded-full bg-emerald-500"></span>
+        <span id="ind-2" class="step-ind flex-1 h-1.5 rounded-full bg-slate-200"></span>
+        <span id="ind-3" class="step-ind flex-1 h-1.5 rounded-full bg-slate-200"></span>
+        <span id="ind-4" class="step-ind flex-1 h-1.5 rounded-full bg-slate-200"></span>
+      </div>
+
+      <!-- STEP 1: Scan / NIK -->
+      <div id="step-1" class="step active">
+        <h3 class="font-semibold text-navy-700 mb-3">Langkah 1: Identifikasi Karyawan</h3>
+        <div id="qr-reader" class="mb-3 rounded-xl overflow-hidden border border-slate-200"></div>
+        <div class="flex gap-2 mb-3">
+          <button id="qr-toggle-btn" onclick="toggleQrScanner()" class="text-sm text-emerald-600 font-medium">▶ Aktifkan Kamera QR</button>
+        </div>
+        <div id="qr-fallback-note" class="hidden mb-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p class="text-xs text-amber-700 mb-2">Kamera live tidak dapat diakses browser (izin ditolak/diblokir). Ambil/unggah foto QR sebagai gantinya:</p>
+          <button onclick="document.getElementById('qr-fallback-input').click()" class="bg-navy-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium">📷 Foto / Unggah QR</button>
+        </div>
+        <input type="file" id="qr-fallback-input" accept="image/*" capture="environment" class="hidden" onchange="handleQrFallbackFile(event)">
+        <div class="relative my-3 text-center text-xs text-slate-400">atau masukkan NIK manual</div>
+        <div class="flex gap-2">
+          <input id="input-nik" type="text" placeholder="Masukkan NIK" class="flex-1 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <button onclick="lookupKaryawan()" class="bg-navy-700 text-white px-4 py-2 rounded-lg font-medium hover:bg-navy-800">Cari</button>
+        </div>
+
+        <div id="karyawan-card" class="hidden mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+          <p class="text-sm text-slate-500">Nama</p>
+          <p class="font-bold text-navy-800 text-lg" id="karyawan-nama"></p>
+          <p class="text-sm text-slate-500 mt-1">Departemen</p>
+          <p class="font-medium text-navy-700" id="karyawan-dept"></p>
+          <button onclick="goToStep(2)" class="mt-4 w-full bg-emerald-600 text-white py-2 rounded-lg font-semibold hover:bg-emerald-700">Lanjut →</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Selfie -->
+      <div id="step-2" class="step">
+        <h3 class="font-semibold text-navy-700 mb-3">Langkah 2: Ambil Foto Selfie</h3>
+        <div class="rounded-xl overflow-hidden bg-slate-900 relative aspect-[3/4] max-w-xs mx-auto">
+          <video id="camera-video" class="w-full h-full object-cover hidden" autoplay playsinline></video>
+          <img id="camera-photo" class="w-full h-full object-cover hidden">
+          <canvas id="camera-canvas" class="hidden"></canvas>
+        </div>
+        <div class="flex gap-2 mt-4 justify-center flex-wrap">
+          <button id="btn-start-camera" onclick="startCamera()" class="bg-navy-700 text-white px-4 py-2 rounded-lg font-medium">Buka Kamera</button>
+          <button id="btn-take-photo" onclick="takePhoto()" class="hidden bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium">📸 Ambil Foto</button>
+          <button id="btn-retake" onclick="retakePhoto()" class="hidden bg-amber-500 text-white px-4 py-2 rounded-lg font-medium">↺ Ulangi</button>
+        </div>
+        <div id="camera-fallback-note" class="hidden mt-3 text-center">
+          <p class="text-xs text-amber-600 mb-2">Kamera browser tidak dapat diakses (izin ditolak, atau perangkat tidak punya kamera). Gunakan kamera HP secara langsung:</p>
+          <button onclick="document.getElementById('camera-fallback-input').click()" class="bg-navy-700 text-white px-4 py-2 rounded-lg font-medium text-sm">📱 Buka Kamera HP</button>
+        </div>
+        <input type="file" id="camera-fallback-input" accept="image/*" capture="user" class="hidden" onchange="handleFallbackPhoto(event)">
+        <div class="flex gap-3 mt-6">
+          <button onclick="goToStep(1)" class="flex-1 border border-slate-300 text-slate-600 py-2 rounded-lg font-medium">← Kembali</button>
+          <button id="btn-step2-next" onclick="goToStep(3)" disabled class="flex-1 bg-emerald-600 disabled:bg-slate-300 text-white py-2 rounded-lg font-semibold">Lanjut →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: GPS -->
+      <div id="step-3" class="step">
+        <h3 class="font-semibold text-navy-700 mb-3">Langkah 3: Validasi Lokasi</h3>
+        <div id="gps-status" class="rounded-xl border p-4 flex items-center gap-3 bg-slate-50 border-slate-200">
+          <div class="spinner"></div>
+          <span class="text-sm text-slate-500">Mendeteksi lokasi Anda...</span>
+        </div>
+        <button id="btn-gps-retry" onclick="prefetchLocation(); renderLocationStep();" class="hidden mt-2 text-xs text-emerald-600 font-medium">↻ Coba deteksi ulang</button>
+        <div class="flex gap-3 mt-6">
+          <button onclick="goToStep(2)" class="flex-1 border border-slate-300 text-slate-600 py-2 rounded-lg font-medium">← Kembali</button>
+          <button id="btn-step3-next" onclick="goToStep(4)" disabled class="flex-1 bg-emerald-600 disabled:bg-slate-300 text-white py-2 rounded-lg font-semibold">Lanjut →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: Status & Submit -->
+      <div id="step-4" class="step">
+        <h3 class="font-semibold text-navy-700 mb-3">Langkah 4: Pilih Status & Kirim</h3>
+        <label class="text-sm text-slate-500">Status Kehadiran</label>
+        <select id="select-status" class="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1 mb-4 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        </select>
+        <label class="text-sm text-slate-500">Keterangan (opsional)</label>
+        <textarea id="input-keterangan" rows="2" class="w-full border border-slate-300 rounded-lg px-3 py-2 mt-1 mb-4 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+        <div class="flex gap-3">
+          <button onclick="goToStep(3)" class="flex-1 border border-slate-300 text-slate-600 py-2 rounded-lg font-medium">← Kembali</button>
+          <button onclick="submitAbsensi()" class="flex-1 bg-emerald-600 text-white py-2 rounded-lg font-semibold hover:bg-emerald-700">Kirim Absensi</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= RIWAYAT VIEW ================= -->
+  <section id="view-riwayat" class="view">
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-navy-800">Riwayat Absensi Saya</h2>
+        <button onclick="showView('landing')" class="text-slate-400 hover:text-slate-600 text-sm">✕ Tutup</button>
+      </div>
+      <div class="flex gap-2 mb-4">
+        <input id="riwayat-nik" type="text" placeholder="Masukkan NIK Anda" class="flex-1 border border-slate-300 rounded-lg px-3 py-2">
+        <button onclick="loadRiwayat()" class="bg-navy-700 text-white px-4 py-2 rounded-lg font-medium hover:bg-navy-800">Cek</button>
+      </div>
+      <div id="riwayat-list" class="space-y-2 text-sm"></div>
+    </div>
+  </section>
+
+  <!-- ================= ADMIN LOGIN VIEW ================= -->
+  <section id="view-adminLogin" class="view">
+    <div class="max-w-sm mx-auto bg-white rounded-2xl shadow p-6 mt-10">
+      <h2 class="text-xl font-bold text-navy-800 mb-4 text-center">🔐 Login Admin</h2>
+      <input id="admin-password" type="password" placeholder="Password Admin" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3">
+      <button onclick="adminLogin()" class="w-full bg-navy-700 text-white py-2 rounded-lg font-semibold hover:bg-navy-800">Masuk</button>
+      <button onclick="showView('landing')" class="w-full mt-2 text-slate-400 text-sm">Kembali</button>
+    </div>
+  </section>
+
+  <!-- ================= ADMIN DASHBOARD VIEW ================= -->
+  <section id="view-adminDashboard" class="view">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-bold text-navy-800">Dashboard Admin</h2>
+      <button onclick="adminLogout()" class="text-sm text-red-500 font-medium">Keluar</button>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-5 border-b border-slate-200">
+      <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-emerald-600 text-emerald-700" data-tab="karyawan" onclick="switchTab('karyawan')">👥 Data Karyawan</button>
+      <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-transparent text-slate-500" data-tab="laporan" onclick="switchTab('laporan')">📊 Laporan Absensi</button>
+      <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-transparent text-slate-500" data-tab="settings" onclick="switchTab('settings')">⚙️ Pengaturan Kantor</button>
+      <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-transparent text-slate-500" data-tab="password" onclick="switchTab('password')">🔑 Ubah Password</button>
+    </div>
+
+    <!-- TAB: Karyawan -->
+    <div id="tab-karyawan" class="tab-panel">
+      <div class="bg-white rounded-2xl shadow p-5 mb-4">
+        <h3 class="font-semibold text-navy-700 mb-3">Tambah Karyawan Manual</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <input id="k-nik" placeholder="NIK" class="border border-slate-300 rounded-lg px-3 py-2">
+          <input id="k-nama" placeholder="Nama" class="border border-slate-300 rounded-lg px-3 py-2">
+          <input id="k-alamat" placeholder="Alamat" class="border border-slate-300 rounded-lg px-3 py-2">
+          <input id="k-tempatlahir" placeholder="Tempat Lahir" class="border border-slate-300 rounded-lg px-3 py-2">
+          <input id="k-tanggallahir" type="date" placeholder="Tanggal Lahir" class="border border-slate-300 rounded-lg px-3 py-2">
+          <input id="k-departemen" placeholder="Departemen" class="border border-slate-300 rounded-lg px-3 py-2">
+          <input id="k-jabatan" placeholder="Jabatan" class="border border-slate-300 rounded-lg px-3 py-2">
+          <input id="k-keterangan" placeholder="Keterangan" class="border border-slate-300 rounded-lg px-3 py-2">
+        </div>
+        <button onclick="addKaryawanAdmin()" class="mt-3 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700">+ Tambah Karyawan</button>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-5 mb-4">
+        <h3 class="font-semibold text-navy-700 mb-3">Import dari Excel / CSV</h3>
+        <p class="text-xs text-slate-400 mb-2">Urutan kolom: NIK, Nama, Alamat, Tempat Lahir, Tanggal Lahir, Departemen, Jabatan, Keterangan (baris pertama = header, akan dilewati).</p>
+        <input id="import-file" type="file" accept=".xlsx,.xls,.csv" class="text-sm">
+        <button onclick="importKaryawanFile()" class="mt-3 bg-navy-700 text-white px-4 py-2 rounded-lg font-medium hover:bg-navy-800">Import</button>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-navy-700">Daftar Karyawan</h3>
+          <button onclick="loadKaryawanList()" class="text-xs text-emerald-600">↻ Refresh</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="text-left text-slate-400 border-b">
+              <th class="py-2 pr-3">NIK</th><th class="pr-3">Nama</th><th class="pr-3">Departemen</th><th class="pr-3">Jabatan</th><th></th>
+            </tr></thead>
+            <tbody id="karyawan-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Laporan -->
+    <div id="tab-laporan" class="tab-panel hidden">
+      <div class="bg-white rounded-2xl shadow p-5 mb-4">
+        <div class="flex flex-wrap gap-2 items-end">
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Filter Cepat</label>
+            <select id="laporan-filter" class="border border-slate-300 rounded-lg px-3 py-2">
+              <option value="hari_ini">Hari Ini</option>
+              <option value="kemarin">Kemarin</option>
+              <option value="minggu_ini">Minggu Ini</option>
+              <option value="bulan_ini">Bulan Ini</option>
+              <option value="3_bulan">3 Bulan Terakhir</option>
+            </select>
+          </div>
+          <button onclick="loadLaporan()" class="bg-navy-700 text-white px-4 py-2 rounded-lg font-medium">Tampilkan</button>
+          <button onclick="exportLaporanExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium">Export Excel</button>
+          <button onclick="exportLaporanPdf()" class="bg-red-500 text-white px-4 py-2 rounded-lg font-medium">Export PDF</button>
+          <label class="flex items-center gap-2 text-xs text-slate-500 ml-auto cursor-pointer select-none">
+            <input type="checkbox" id="laporan-live-toggle" checked onchange="toggleLaporanLive()">
+            <span id="laporan-live-label">🟢 Live (auto-refresh 15 detik)</span>
+          </label>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-5">
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs" id="laporan-table">
+            <thead><tr class="text-left text-slate-400 border-b">
+              <th class="py-2 pr-3">Tanggal</th><th class="pr-3">NIK</th><th class="pr-3">Nama</th>
+              <th class="pr-3">Dept</th><th class="pr-3">Masuk</th><th class="pr-3">Keluar</th>
+              <th class="pr-3">Status</th><th class="pr-3">Jarak(km)</th><th class="pr-3">Lokasi</th>
+              <th class="pr-3">Foto</th>
+            </tr></thead>
+            <tbody id="laporan-table-body"></tbody>
+          </table>
+          <p id="laporan-empty-note" class="hidden text-center text-slate-400 py-6 text-sm">Belum ada data absensi pada rentang ini.</p>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- TAB: Settings -->
+    <div id="tab-settings" class="tab-panel hidden">
+      <div class="bg-white rounded-2xl shadow p-5 max-w-2xl">
+        <h3 class="font-semibold text-navy-700 mb-1">Koordinat & Radius Kantor</h3>
+        <p class="text-xs text-slate-400 mb-3">Cari alamat, klik langsung di peta, atau pakai lokasi Anda saat ini — koordinat akan terisi otomatis.</p>
+
+        <div class="flex gap-2 mb-3">
+          <input id="set-search" type="text" placeholder="Cari alamat / nama tempat kantor..." class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+          <button onclick="searchOfficeAddress()" class="bg-navy-700 text-white px-3 py-2 rounded-lg text-sm font-medium">🔍 Cari</button>
+        </div>
+
+        <div id="office-map" class="rounded-xl border border-slate-200 mb-3" style="height:320px;"></div>
+        <p class="text-xs text-slate-400 mb-4">📍 Klik di mana saja pada peta untuk menandai lokasi kantor. Lingkaran hijau menunjukkan radius toleransi absensi.</p>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="text-xs text-slate-400">Latitude</label>
+            <input id="set-lat" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" oninput="onManualCoordInput()">
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">Longitude</label>
+            <input id="set-lon" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" oninput="onManualCoordInput()">
+          </div>
+        </div>
+        <label class="text-xs text-slate-400">Radius Toleransi (meter)</label>
+        <input id="set-radius" type="number" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3" oninput="onManualCoordInput()">
+
+        <div class="flex gap-3 items-center">
+          <button onclick="useCurrentLocationAsOffice()" class="text-xs text-emerald-600 font-medium">📍 Gunakan lokasi saya saat ini</button>
+        </div>
+        <button onclick="saveOfficeSettings()" class="w-full mt-4 bg-emerald-600 text-white py-2 rounded-lg font-semibold hover:bg-emerald-700">Simpan Pengaturan</button>
+      </div>
+    </div>
+
+
+    <!-- TAB: Password -->
+    <div id="tab-password" class="tab-panel hidden">
+      <div class="bg-white rounded-2xl shadow p-5 max-w-md">
+        <h3 class="font-semibold text-navy-700 mb-3">Ubah Password Admin</h3>
+        <input id="pw-old" type="password" placeholder="Password Lama" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3">
+        <input id="pw-new" type="password" placeholder="Password Baru" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3">
+        <button onclick="changePassword()" class="w-full bg-navy-700 text-white py-2 rounded-lg font-semibold">Ubah Password</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="text-center text-xs text-slate-400 py-6">
+  HDIR &copy;2026 Ishbiruu Tech | 081413333513
+</footer>
+
+<script>
+/* ============================================================
+   HDIR FRONTEND JS
+   Uses google.script.run when hosted as a GAS Web App.
+   Falls back to fetch() against a deployed Web App URL when
+   hosted externally (e.g. GitHub Pages) — set WEB_APP_URL below.
+   ============================================================ */
+
+/* ============================================================
+   HDIR FRONTEND JS
+   Standalone static frontend — di-host di GitHub Pages (atau
+   host statis lain). Semua komunikasi ke backend dilakukan lewat
+   fetch() ke Web App Google Apps Script yang sudah di-deploy.
+   ============================================================ */
+
+// >>> WAJIB DIISI: tempel URL deployment Web App Apps Script kamu
+// di sini, yang diakhiri "/exec". Contoh:
+// const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbylkwvNrp8W6BeRHmGFuA6zDHhoRix_2xDcZN-1MyhQpuGPFk5adT7XXktopau5U_BS/exec';
+
+function callServer(action, params) {
+  params = params || {};
+  params.action = action;
+  if (!WEB_APP_URL) {
+    return Promise.reject(new Error('WEB_APP_URL belum diisi di index.html. Tempel URL deployment Apps Script (diakhiri /exec) di bagian atas script.'));
+  }
+  return fetch(WEB_APP_URL, {
+    method: 'POST',
+    body: JSON.stringify(params) // no custom Content-Type header -> stays a CORS-simple request, no preflight needed
+  })
+    .then(r => {
+      if (!r.ok) throw new Error('Server merespons status ' + r.status + '.');
+      return r.json();
+    })
+    .then(res => {
+      if (res === null || res === undefined) {
+        throw new Error('Server tidak mengembalikan data untuk aksi "' + action + '".');
+      }
+      return res;
+    });
+}
+
+// Tampilkan peringatan yang jelas di layar kalau developer lupa
+// mengisi WEB_APP_URL, alih-alih membiarkan semua tombol gagal
+// diam-diam.
+window.addEventListener('DOMContentLoaded', () => {
+  if (!WEB_APP_URL) {
+    const banner = document.createElement('div');
+    banner.className = 'bg-amber-100 border-b border-amber-300 text-amber-800 text-sm text-center py-2 px-4';
+    banner.innerHTML = '⚠️ <strong>WEB_APP_URL belum diisi.</strong> Buka index.html, isi konstanta WEB_APP_URL dengan URL deployment Apps Script kamu (diakhiri /exec), lalu publish ulang.';
+    document.body.insertBefore(banner, document.body.firstChild);
+  }
+});
+
+// ---------- UI helpers ----------
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+}
+function toast(msg, type) {
+  const el = document.createElement('div');
+  const colors = { success: 'bg-emerald-600', error: 'bg-red-500', info: 'bg-navy-700' };
+  el.className = `${colors[type || 'info']} text-white px-4 py-2 rounded-lg shadow-lg text-sm max-w-xs`;
+  el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+function showLoading(text) {
+  document.getElementById('global-loading-text').textContent = text || 'Memproses...';
+  document.getElementById('global-loading').classList.remove('hidden');
+}
+function hideLoading() { document.getElementById('global-loading').classList.add('hidden'); }
+
+// ---------- Digital clock ----------
+function tickClock() {
+  const now = new Date();
+  document.getElementById('digital-clock').textContent = now.toLocaleString('id-ID', {
+    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+// ============================================================
+// ABSENSI FLOW STATE
+// ============================================================
+let absensiState = {
+  nik: null, nama: null, departemen: null,
+  fotoBase64: null, lat: null, lon: null,
+  statusLokasi: null, jarakMeter: null
+};
+let qrScanner = null;
+let qrActive = false;
+let mediaStream = null;
+
+function startAbsensiFlow() {
+  resetAbsensiFlow();
+  showView('absensi');
+  goToStep(1);
+}
+
+function resetAbsensiFlow() {
+  absensiState = { nik: null, nama: null, departemen: null, fotoBase64: null, lat: null, lon: null, statusLokasi: null, jarakMeter: null };
+  document.getElementById('karyawan-card').classList.add('hidden');
+  document.getElementById('input-nik').value = '';
+  document.getElementById('qr-fallback-note').classList.add('hidden');
+  document.getElementById('qr-fallback-input').value = '';
+  locationPromise = null;
+  stopCamera();
+  document.getElementById('camera-photo').classList.add('hidden');
+  document.getElementById('camera-video').classList.add('hidden');
+  document.getElementById('btn-take-photo').classList.add('hidden');
+  document.getElementById('btn-retake').classList.add('hidden');
+  document.getElementById('btn-start-camera').classList.remove('hidden');
+  document.getElementById('camera-fallback-note').classList.add('hidden');
+  document.getElementById('camera-fallback-input').value = '';
+  document.getElementById('btn-step2-next').disabled = true;
+  document.getElementById('btn-step3-next').disabled = true;
+  stopQrScanner();
+}
+
+function goToStep(n) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-' + n).classList.add('active');
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('ind-' + i).className = 'step-ind flex-1 h-1.5 rounded-full ' + (i <= n ? 'bg-emerald-500' : 'bg-slate-200');
+  }
+  // Kick off GPS detection the moment the user reaches Step 2 (photo) so it
+  // runs in the background while they take their selfie — by the time they
+  // reach Step 3 the result is usually already there, no extra wait.
+  if (n === 2 && !locationPromise) prefetchLocation();
+  if (n === 3) renderLocationStep();
+  if (n === 4) populateStatusOptions();
+}
+
+// ---------- Step 1: QR / NIK ----------
+function toggleQrScanner() {
+  if (qrActive) { stopQrScanner(); return; }
+  document.getElementById('qr-fallback-note').classList.add('hidden');
+  qrScanner = new Html5Qrcode('qr-reader');
+  qrScanner.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: 220 },
+    decodedText => {
+      document.getElementById('input-nik').value = decodedText;
+      stopQrScanner();
+      lookupKaryawan();
+    },
+    () => {} // per-frame "no QR found yet" callback — not an error, ignore
+  ).then(() => {
+    qrActive = true;
+    document.getElementById('qr-toggle-btn').textContent = '⏸ Matikan Kamera QR';
+  }).catch(err => {
+    // NotAllowedError / SecurityError / NotFoundError here means the
+    // camera permission was denied or unavailable. Guide the user to the
+    // working alternative instead of dumping the raw error.
+    qrActive = false;
+    document.getElementById('qr-toggle-btn').textContent = '▶ Aktifkan Kamera QR';
+    document.getElementById('qr-fallback-note').classList.remove('hidden');
+    toast('Kamera QR tidak dapat diakses. Gunakan opsi foto/unggah QR di bawah, atau masukkan NIK manual.', 'error');
+  });
+}
+function stopQrScanner() {
+  if (qrScanner && qrActive) {
+    qrScanner.stop().catch(() => {});
+  }
+  qrActive = false;
+  const btn = document.getElementById('qr-toggle-btn');
+  if (btn) btn.textContent = '▶ Aktifkan Kamera QR';
+}
+function handleQrFallbackFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  showLoading('Membaca QR dari foto...');
+  const fileScanner = new Html5Qrcode('qr-reader');
+  fileScanner.scanFile(file, true)
+    .then(decodedText => {
+      hideLoading();
+      document.getElementById('input-nik').value = decodedText;
+      lookupKaryawan();
+    })
+    .catch(() => {
+      hideLoading();
+      toast('QR tidak terbaca dari foto tersebut. Coba foto ulang dengan QR lebih jelas, atau masukkan NIK manual.', 'error');
+    })
+    .finally(() => { event.target.value = ''; });
+}
+
+function lookupKaryawan() {
+  const nik = document.getElementById('input-nik').value.trim();
+  if (!nik) { toast('Masukkan NIK terlebih dahulu.', 'error'); return; }
+  showLoading('Mencari data karyawan...');
+  callServer('getKaryawan', { nik })
+    .then(res => {
+      hideLoading();
+      if (!res.success) { toast(res.message, 'error'); return; }
+      absensiState.nik = res.data.nik;
+      absensiState.nama = res.data.nama;
+      absensiState.departemen = res.data.departemen;
+      document.getElementById('karyawan-nama').textContent = res.data.nama;
+      document.getElementById('karyawan-dept').textContent = res.data.departemen;
+      document.getElementById('karyawan-card').classList.remove('hidden');
+    })
+    .catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+
+// ---------- Step 2: Camera ----------
+function startCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showCameraFallback();
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+    .then(stream => {
+      mediaStream = stream;
+      const video = document.getElementById('camera-video');
+      video.srcObject = stream;
+      video.classList.remove('hidden');
+      document.getElementById('btn-start-camera').classList.add('hidden');
+      document.getElementById('btn-take-photo').classList.remove('hidden');
+    })
+    .catch(err => {
+      // Camera access can still fail here for ordinary reasons — the user
+      // denied the permission prompt, the browser/device has no camera, or
+      // the site isn't served over HTTPS. Fall back to the device's native
+      // camera app via a file input rather than showing a raw error.
+      toast('Kamera browser tidak bisa diakses, mencoba mode alternatif...', 'info');
+      showCameraFallback();
+    });
+}
+function showCameraFallback() {
+  document.getElementById('btn-start-camera').classList.add('hidden');
+  document.getElementById('camera-fallback-note').classList.remove('hidden');
+}
+function handleFallbackPhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = e => {
+    img.onload = () => {
+      const dataUrl = compressToCanvas_(img, img.naturalWidth, img.naturalHeight);
+      absensiState.fotoBase64 = dataUrl;
+      document.getElementById('camera-photo').src = dataUrl;
+      document.getElementById('camera-photo').classList.remove('hidden');
+      document.getElementById('camera-fallback-note').classList.add('hidden');
+      document.getElementById('btn-retake').classList.remove('hidden');
+      document.getElementById('btn-step2-next').disabled = false;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function stopCamera() {
+  if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+}
+function takePhoto() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  const dataUrl = compressToCanvas_(video, video.videoWidth, video.videoHeight);
+  absensiState.fotoBase64 = dataUrl;
+  document.getElementById('camera-photo').src = dataUrl;
+  document.getElementById('camera-photo').classList.remove('hidden');
+  video.classList.add('hidden');
+  stopCamera();
+  document.getElementById('btn-take-photo').classList.add('hidden');
+  document.getElementById('btn-retake').classList.remove('hidden');
+  document.getElementById('btn-step2-next').disabled = false;
+}
+
+/**
+ * Draws a video/image source onto a capped-size canvas and returns a
+ * compressed JPEG data URL. Keeps selfie photos well under ~150-250KB so
+ * the base64 payload to Apps Script and the Drive upload stay fast,
+ * without visibly hurting quality for an attendance photo.
+ */
+function compressToCanvas_(source, srcWidth, srcHeight) {
+  const MAX_DIM = 720;
+  let w = srcWidth, h = srcHeight;
+  if (w > MAX_DIM || h > MAX_DIM) {
+    const scale = MAX_DIM / Math.max(w, h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  const canvas = document.getElementById('camera-canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(source, 0, 0, w, h);
+  return canvas.toDataURL('image/jpeg', 0.72);
+}
+function retakePhoto() {
+  document.getElementById('camera-photo').classList.add('hidden');
+  document.getElementById('btn-retake').classList.add('hidden');
+  document.getElementById('btn-step2-next').disabled = true;
+  document.getElementById('camera-fallback-input').value = '';
+  absensiState.fotoBase64 = null;
+  startCamera();
+}
+
+let locationPromise = null;
+
+/**
+ * Starts GPS + office-settings lookup in the background and caches the
+ * in-flight promise so it only runs once. Called early (Step 2) so the
+ * result is usually ready by the time the user reaches Step 3.
+ */
+function prefetchLocation() {
+  locationPromise = new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation tidak didukung perangkat ini.'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        absensiState.lat = pos.coords.latitude;
+        absensiState.lon = pos.coords.longitude;
+        callServer('getSettings', {}).then(res => {
+          if (!res || !res.success) { reject(new Error('Gagal memuat pengaturan kantor.')); return; }
+          const officeLat = parseFloat(res.data.latitudeKantor);
+          const officeLon = parseFloat(res.data.longitudeKantor);
+          const radius = parseFloat(res.data.radiusMaksimalMeter);
+          const dist = haversineMeters(officeLat, officeLon, absensiState.lat, absensiState.lon);
+          absensiState.jarakMeter = dist;
+          const inArea = dist <= radius;
+          absensiState.statusLokasi = inArea ? 'Valid Dalam Area' : 'Luar Area';
+          resolve({ dist, inArea, accuracy: pos.coords.accuracy });
+        }).catch(reject);
+      },
+      err => reject(new Error(err.message)),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 }
+    );
+  });
+  return locationPromise;
+}
+
+/** Renders whatever state prefetchLocation's promise is currently in. */
+function renderLocationStep() {
+  const statusEl = document.getElementById('gps-status');
+  const retryBtn = document.getElementById('btn-gps-retry');
+  const nextBtn = document.getElementById('btn-step3-next');
+  retryBtn.classList.add('hidden');
+  nextBtn.disabled = true;
+  statusEl.className = 'rounded-xl border p-4 flex items-center gap-3 bg-slate-50 border-slate-200';
+  statusEl.innerHTML = '<div class="spinner"></div><span class="text-sm text-slate-500">Mendeteksi lokasi Anda...</span>';
+
+  if (!locationPromise) prefetchLocation();
+
+  locationPromise.then(({ dist, inArea, accuracy }) => {
+    if (inArea) {
+      statusEl.className = 'rounded-xl border p-4 bg-emerald-50 border-emerald-300';
+      statusEl.innerHTML = `<span class="text-emerald-700 text-sm font-medium">🟢 Valid Dalam Area (±${Math.round(dist)}m dari kantor, akurasi GPS ±${Math.round(accuracy)}m)</span>`;
+    } else {
+      statusEl.className = 'rounded-xl border p-4 bg-red-50 border-red-300';
+      statusEl.innerHTML = `<span class="text-red-700 text-sm font-medium">🔴 Luar Area (±${Math.round(dist)}m dari kantor). Hanya Izin/Cuti/WFH tersedia.</span>`;
+    }
+    if (accuracy && accuracy > 100) {
+      statusEl.innerHTML += `<div class="text-xs text-amber-600 mt-1 w-full">⚠️ Akurasi GPS rendah (±${Math.round(accuracy)}m) — hasil mungkin kurang presisi. Coba di area terbuka jika perlu.</div>`;
+    }
+    nextBtn.disabled = false;
+  }).catch(err => {
+    statusEl.className = 'rounded-xl border p-4 bg-red-50 border-red-300';
+    statusEl.innerHTML = `<span class="text-sm text-red-600">Gagal mendapatkan lokasi: ${err.message}</span>`;
+    retryBtn.classList.remove('hidden');
+  });
+}
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ---------- Step 4: Status & Submit ----------
+function populateStatusOptions() {
+  const sel = document.getElementById('select-status');
+  sel.innerHTML = '';
+  const inArea = absensiState.statusLokasi === 'Valid Dalam Area';
+  const options = inArea
+    ? [['Masuk', 'Absen Masuk'], ['Keluar', 'Absen Keluar']]
+    : [['Izin', 'Izin'], ['Cuti', 'Cuti'], ['WFH', 'WFH']];
+  options.forEach(([val, label]) => {
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = label;
+    sel.appendChild(opt);
+  });
+}
+let isSubmittingAbsensi = false;
+function submitAbsensi() {
+  if (isSubmittingAbsensi) return; // guard against double-tap / double-click
+
+  const status = document.getElementById('select-status').value;
+  const keterangan = document.getElementById('input-keterangan').value.trim();
+
+  // Thorough client-side checks first — catches mistakes instantly instead
+  // of wasting a round trip to the server only to get rejected.
+  const problems = [];
+  if (!absensiState.nik) problems.push('Data karyawan belum dikonfirmasi (kembali ke Langkah 1).');
+  if (!status) problems.push('Status kehadiran belum dipilih.');
+  const needsPhoto = (status === 'Masuk' || status === 'Keluar');
+  if (needsPhoto && !absensiState.fotoBase64) problems.push('Foto selfie belum diambil (kembali ke Langkah 2).');
+  if (absensiState.lat === null || absensiState.lon === null) problems.push('Lokasi GPS belum terdeteksi (kembali ke Langkah 3).');
+  if ((status === 'Masuk' || status === 'Keluar') && absensiState.statusLokasi !== 'Valid Dalam Area') {
+    problems.push('Status "' + status + '" hanya bisa dikirim saat Anda berada dalam radius kantor.');
+  }
+  if (problems.length) { toast(problems[0], 'error'); return; }
+
+  isSubmittingAbsensi = true;
+  const submitBtn = document.querySelector('#step-4 button[onclick="submitAbsensi()"]');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.classList.add('opacity-60'); }
+
+  showLoading(needsPhoto ? 'Mengunggah foto & menyimpan absensi...' : 'Menyimpan absensi...');
+  callServer('processAbsensi', {
+    nik: absensiState.nik,
+    status,
+    fotoBase64: absensiState.fotoBase64,
+    lat: absensiState.lat,
+    lon: absensiState.lon,
+    keterangan
+  }).then(res => {
+    hideLoading();
+    isSubmittingAbsensi = false;
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.classList.remove('opacity-60'); }
+    if (!res || !res.success) { toast((res && res.message) || 'Gagal mengirim absensi.', 'error'); return; }
+    toast(res.message, 'success');
+    resetAbsensiFlow();
+    showView('landing');
+  }).catch(err => {
+    hideLoading();
+    isSubmittingAbsensi = false;
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.classList.remove('opacity-60'); }
+    toast('Gagal: ' + err.message, 'error');
+  });
+}
+
+// ============================================================
+// RIWAYAT (self-service)
+// ============================================================
+function loadRiwayat() {
+  const nik = document.getElementById('riwayat-nik').value.trim();
+  if (!nik) { toast('Masukkan NIK.', 'error'); return; }
+  showLoading('Memuat riwayat...');
+  callServer('getRiwayat', { nik }).then(res => {
+    hideLoading();
+    const list = document.getElementById('riwayat-list');
+    list.innerHTML = '';
+    if (!res.success || !res.data.length) { list.innerHTML = '<p class="text-slate-400 text-center py-6">Belum ada riwayat.</p>'; return; }
+    res.data.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'border border-slate-200 rounded-lg p-3 flex justify-between items-center';
+      div.innerHTML = `<div><p class="font-medium text-navy-700">${r.tanggal} — ${r.status}</p>
+        <p class="text-xs text-slate-400">Masuk: ${r.jamMasuk || '-'} | Keluar: ${r.jamKeluar || '-'}</p></div>`;
+      list.appendChild(div);
+    });
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+
+// ============================================================
+// ADMIN
+// ============================================================
+let isAdmin = false;
+function adminLogin() {
+  const pw = document.getElementById('admin-password').value;
+  showLoading('Memverifikasi...');
+  callServer('checkAdminPassword', { password: pw }).then(res => {
+    hideLoading();
+    if (!res.success) { toast(res.message, 'error'); return; }
+    isAdmin = true;
+    showView('adminDashboard');
+    switchTab('karyawan');
+    loadKaryawanList();
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+function adminLogout() { isAdmin = false; stopLaporanLivePolling(); showView('landing'); }
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+  document.getElementById('tab-' + name).classList.remove('hidden');
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if (b.dataset.tab === name) {
+      b.className = 'tab-btn px-4 py-2 font-medium text-sm border-b-2 border-emerald-600 text-emerald-700';
+    } else {
+      b.className = 'tab-btn px-4 py-2 font-medium text-sm border-b-2 border-transparent text-slate-500';
+    }
+  });
+  if (name === 'laporan') {
+    loadLaporanWithSpinner();
+    if (document.getElementById('laporan-live-toggle').checked) startLaporanLivePolling();
+  } else {
+    stopLaporanLivePolling(); // don't keep polling in the background on other tabs
+  }
+  if (name === 'settings') loadOfficeSettingsIntoForm();
+}
+
+// ---- Karyawan management ----
+function addKaryawanAdmin() {
+  const payload = {
+    nik: document.getElementById('k-nik').value.trim(),
+    nama: document.getElementById('k-nama').value.trim(),
+    alamat: document.getElementById('k-alamat').value.trim(),
+    tempatLahir: document.getElementById('k-tempatlahir').value.trim(),
+    tanggalLahir: document.getElementById('k-tanggallahir').value,
+    departemen: document.getElementById('k-departemen').value.trim(),
+    jabatan: document.getElementById('k-jabatan').value.trim(),
+    keterangan: document.getElementById('k-keterangan').value.trim()
+  };
+  if (!payload.nik || !payload.nama) { toast('NIK dan Nama wajib diisi.', 'error'); return; }
+  showLoading('Menyimpan...');
+  callServer('addKaryawan', payload).then(res => {
+    hideLoading();
+    toast(res.message, res.success ? 'success' : 'error');
+    if (res.success) { loadKaryawanList(); ['k-nik','k-nama','k-alamat','k-tempatlahir','k-tanggallahir','k-departemen','k-jabatan','k-keterangan'].forEach(id => document.getElementById(id).value = ''); }
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+
+function loadKaryawanList() {
+  callServer('getAllKaryawan', {}).then(res => {
+    const body = document.getElementById('karyawan-table-body');
+    body.innerHTML = '';
+    if (!res.success) return;
+    res.data.forEach(k => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b last:border-0';
+      tr.innerHTML = `<td class="py-2 pr-3">${k.nik}</td><td class="pr-3">${k.nama}</td>
+        <td class="pr-3">${k.departemen}</td><td class="pr-3">${k.jabatan}</td>
+        <td><button class="text-red-500 text-xs" onclick="deleteKaryawanAdmin('${k.nik}')">Hapus</button></td>`;
+      body.appendChild(tr);
+    });
+  });
+}
+function deleteKaryawanAdmin(nik) {
+  if (!confirm('Hapus karyawan NIK ' + nik + '?')) return;
+  callServer('deleteKaryawan', { nik }).then(res => { toast(res.message, res.success ? 'success' : 'error'); loadKaryawanList(); });
+}
+
+function importKaryawanFile() {
+  const fileInput = document.getElementById('import-file');
+  if (!fileInput.files.length) { toast('Pilih file terlebih dahulu.', 'error'); return; }
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }).slice(1) // skip header row
+      .filter(r => r.length && r[0]);
+    if (!rows.length) { toast('File kosong atau format tidak sesuai.', 'error'); return; }
+    showLoading('Mengimpor ' + rows.length + ' baris...');
+    callServer('importKaryawan', { rows }).then(res => {
+      hideLoading();
+      toast(res.message, res.success ? 'success' : 'error');
+      if (res.success) loadKaryawanList();
+    }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ---- Laporan ----
+let lastLaporanData = [];
+let laporanLiveTimer = null;
+
+function loadLaporan() {
+  const filter = document.getElementById('laporan-filter').value;
+  callServer('getLaporan', { filter }).then(res => {
+    const body = document.getElementById('laporan-table-body');
+    const emptyNote = document.getElementById('laporan-empty-note');
+    body.innerHTML = '';
+    if (!res.success) { toast(res.message, 'error'); return; }
+    lastLaporanData = res.data;
+    if (!res.data.length) {
+      emptyNote.classList.remove('hidden');
+      return;
+    }
+    emptyNote.classList.add('hidden');
+    res.data.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b last:border-0';
+      const fotoLink = r.fotoMasukUrl
+        ? `<a href="${r.fotoMasukUrl}" target="_blank" rel="noopener" class="text-emerald-600 underline">Masuk</a>`
+        : '';
+      const fotoKeluarLink = r.fotoKeluarUrl
+        ? `<a href="${r.fotoKeluarUrl}" target="_blank" rel="noopener" class="text-emerald-600 underline">Keluar</a>`
+        : '';
+      const fotoCell = [fotoLink, fotoKeluarLink].filter(Boolean).join(' / ') || '-';
+      tr.innerHTML = `<td class="py-2 pr-3">${r.tanggal}</td><td class="pr-3">${r.nik}</td><td class="pr-3">${r.nama}</td>
+        <td class="pr-3">${r.departemen}</td><td class="pr-3">${r.jamMasuk||'-'}</td><td class="pr-3">${r.jamKeluar||'-'}</td>
+        <td class="pr-3">${r.status}</td><td class="pr-3">${r.jarakKm||'-'}</td><td class="pr-3">${r.statusLokasi||'-'}</td>
+        <td class="pr-3">${fotoCell}</td>`;
+      body.appendChild(tr);
+    });
+  }).catch(err => toast('Gagal memuat laporan: ' + err.message, 'error'));
+}
+
+/** First load of the tab shows the spinner; background refreshes don't
+ *  (so the live updates feel seamless instead of flashing a loader every
+ *  15 seconds). */
+function loadLaporanWithSpinner() {
+  showLoading('Memuat laporan...');
+  loadLaporan();
+  hideLoading();
+}
+
+function startLaporanLivePolling() {
+  stopLaporanLivePolling();
+  laporanLiveTimer = setInterval(loadLaporan, 15000);
+}
+function stopLaporanLivePolling() {
+  if (laporanLiveTimer) { clearInterval(laporanLiveTimer); laporanLiveTimer = null; }
+}
+function toggleLaporanLive() {
+  const on = document.getElementById('laporan-live-toggle').checked;
+  document.getElementById('laporan-live-label').textContent = on
+    ? '🟢 Live (auto-refresh 15 detik)' : '⚪ Live nonaktif';
+  if (on) { loadLaporan(); startLaporanLivePolling(); } else { stopLaporanLivePolling(); }
+}
+
+function exportLaporanExcel() {
+  if (!lastLaporanData.length) { toast('Tidak ada data untuk diexport.', 'error'); return; }
+  const ws = XLSX.utils.json_to_sheet(lastLaporanData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Laporan');
+  XLSX.writeFile(wb, 'Laporan_HDIR_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+function exportLaporanPdf() {
+  if (!lastLaporanData.length) { toast('Tidak ada data untuk diexport.', 'error'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text('Laporan Absensi HDIR', 14, 15);
+  doc.autoTable({
+    startY: 20,
+    head: [['Tanggal','NIK','Nama','Dept','Masuk','Keluar','Status']],
+    body: lastLaporanData.map(r => [r.tanggal, r.nik, r.nama, r.departemen, r.jamMasuk||'-', r.jamKeluar||'-', r.status])
+  });
+  doc.save('Laporan_HDIR_' + new Date().toISOString().slice(0,10) + '.pdf');
+}
+
+// ---- Settings: interactive map ----
+let officeMap = null, officeMarker = null, officeCircle = null;
+const DEFAULT_MAP_CENTER = [-6.200000, 106.816666]; // fallback: Jakarta area
+
+function initOfficeMap() {
+  if (officeMap) return; // build once, reuse across tab switches
+  officeMap = L.map('office-map').setView(DEFAULT_MAP_CENTER, 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(officeMap);
+
+  officeMarker = L.marker(DEFAULT_MAP_CENTER, { draggable: true }).addTo(officeMap);
+  officeCircle = L.circle(DEFAULT_MAP_CENTER, { radius: 500, color: '#10b981', fillColor: '#10b981', fillOpacity: 0.15 }).addTo(officeMap);
+
+  // Click anywhere on the map to move the office marker there.
+  officeMap.on('click', e => setOfficeLocation(e.latlng.lat, e.latlng.lng, false));
+  // Dragging the marker itself also works, for fine-tuning.
+  officeMarker.on('dragend', () => {
+    const pos = officeMarker.getLatLng();
+    setOfficeLocation(pos.lat, pos.lng, false);
+  });
+
+  // Leaflet sometimes measures the container before the tab is visible,
+  // which makes the tiles render at the wrong size — fix it once shown.
+  setTimeout(() => officeMap.invalidateSize(), 200);
+}
+
+/** Single source of truth: updates inputs + marker + circle together. */
+function setOfficeLocation(lat, lon, recenter) {
+  document.getElementById('set-lat').value = lat.toFixed(6);
+  document.getElementById('set-lon').value = lon.toFixed(6);
+  if (officeMarker) officeMarker.setLatLng([lat, lon]);
+  if (officeCircle) officeCircle.setLatLng([lat, lon]);
+  if (recenter && officeMap) officeMap.setView([lat, lon], 16);
+}
+function updateRadiusCircle() {
+  const radius = parseFloat(document.getElementById('set-radius').value);
+  if (officeCircle && !isNaN(radius) && radius > 0) officeCircle.setRadius(radius);
+}
+/** Lets someone type lat/lon/radius by hand and still see the map update. */
+function onManualCoordInput() {
+  const lat = parseFloat(document.getElementById('set-lat').value);
+  const lon = parseFloat(document.getElementById('set-lon').value);
+  if (!isNaN(lat) && !isNaN(lon)) {
+    if (officeMarker) officeMarker.setLatLng([lat, lon]);
+    if (officeCircle) officeCircle.setLatLng([lat, lon]);
+  }
+  updateRadiusCircle();
+}
+
+/** Free geocoding via OpenStreetMap's Nominatim — no API key required. */
+function searchOfficeAddress() {
+  const query = document.getElementById('set-search').value.trim();
+  if (!query) { toast('Masukkan alamat atau nama tempat dulu.', 'error'); return; }
+  showLoading('Mencari lokasi...');
+  fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query))
+    .then(r => r.json())
+    .then(results => {
+      hideLoading();
+      if (!results.length) { toast('Alamat tidak ditemukan. Coba kata kunci lain, atau klik langsung di peta.', 'error'); return; }
+      const { lat, lon } = results[0];
+      setOfficeLocation(parseFloat(lat), parseFloat(lon), true);
+      toast('Lokasi ditemukan — sesuaikan lagi dengan klik di peta jika perlu.', 'success');
+    })
+    .catch(() => { hideLoading(); toast('Gagal mencari alamat. Coba lagi atau klik langsung di peta.', 'error'); });
+}
+
+function loadOfficeSettingsIntoForm() {
+  initOfficeMap();
+  callServer('getSettings', {}).then(res => {
+    if (!res.success) return;
+    const lat = parseFloat(res.data.latitudeKantor);
+    const lon = parseFloat(res.data.longitudeKantor);
+    document.getElementById('set-radius').value = res.data.radiusMaksimalMeter;
+    if (!isNaN(lat) && !isNaN(lon)) {
+      setOfficeLocation(lat, lon, true);
+    }
+    updateRadiusCircle();
+  });
+}
+function useCurrentLocationAsOffice() {
+  navigator.geolocation.getCurrentPosition(pos => {
+    setOfficeLocation(pos.coords.latitude, pos.coords.longitude, true);
+  }, err => toast('Gagal mendapatkan lokasi: ' + err.message, 'error'));
+}
+function saveOfficeSettings() {
+  const payload = {
+    latitudeKantor: document.getElementById('set-lat').value,
+    longitudeKantor: document.getElementById('set-lon').value,
+    radiusMaksimalMeter: document.getElementById('set-radius').value
+  };
+  if (!payload.latitudeKantor || !payload.longitudeKantor || !payload.radiusMaksimalMeter) {
+    toast('Lengkapi koordinat dan radius terlebih dahulu.', 'error'); return;
+  }
+  showLoading('Menyimpan pengaturan...');
+  callServer('saveSettings', payload).then(res => { hideLoading(); toast(res.message, res.success ? 'success' : 'error'); })
+    .catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+function changePassword() {
+  const oldPassword = document.getElementById('pw-old').value;
+  const newPassword = document.getElementById('pw-new').value;
+  if (!oldPassword || !newPassword) { toast('Isi kedua kolom password.', 'error'); return; }
+  showLoading('Mengubah password...');
+  callServer('changeAdminPassword', { oldPassword, newPassword }).then(res => {
+    hideLoading();
+    toast(res.message, res.success ? 'success' : 'error');
+    if (res.success) { document.getElementById('pw-old').value = ''; document.getElementById('pw-new').value = ''; }
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+</script>
+</body>
+</html>
