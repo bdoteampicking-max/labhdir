@@ -7,6 +7,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -249,10 +250,23 @@
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead><tr class="text-left text-slate-400 border-b">
-              <th class="py-2 pr-3">NIK</th><th class="pr-3">Nama</th><th class="pr-3">Departemen</th><th class="pr-3">Jabatan</th><th></th>
+              <th class="py-2 pr-3">NIK</th><th class="pr-3">Nama</th><th class="pr-3">Departemen</th><th class="pr-3">Jabatan</th><th class="pr-3">QR Code</th><th></th>
             </tr></thead>
             <tbody id="karyawan-table-body"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Code viewer modal -->
+    <div id="qr-employee-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
+      <div class="bg-white rounded-2xl shadow-xl p-6 max-w-xs w-full text-center">
+        <p class="text-sm text-slate-400 mb-1" id="qr-employee-nik"></p>
+        <p class="font-bold text-navy-800 mb-4" id="qr-employee-nama"></p>
+        <div id="qr-employee-canvas" class="flex items-center justify-center mb-4"></div>
+        <div class="flex gap-2">
+          <button onclick="downloadEmployeeQr()" class="flex-1 bg-emerald-600 text-white py-2 rounded-lg font-medium text-sm">⬇ Download</button>
+          <button onclick="closeEmployeeQrModal()" class="flex-1 border border-slate-300 text-slate-600 py-2 rounded-lg font-medium text-sm">Tutup</button>
         </div>
       </div>
     </div>
@@ -367,7 +381,7 @@
 // >>> WAJIB DIISI: tempel URL deployment Web App Apps Script kamu
 // di sini, yang diakhiri "/exec". Contoh:
 // const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwQdN32bb6y1LDxBS7Nrq-JvrimCUnraE-v4BT-lAngza3z5OY4GkJFEsL50mcu82z2/exec';
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbylkwvNrp8W6BeRHmGFuA6zDHhoRix_2xDcZN-1MyhQpuGPFk5adT7XXktopau5U_BS/exec';
 
 function callServer(action, params) {
   params = params || {};
@@ -863,16 +877,20 @@ function addKaryawanAdmin() {
   }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
 }
 
+let karyawanByNik = {}; // lookup for the QR modal — avoids escaping names/keys into onclick attributes
 function loadKaryawanList() {
   callServer('getAllKaryawan', {}).then(res => {
     const body = document.getElementById('karyawan-table-body');
     body.innerHTML = '';
     if (!res.success) return;
+    karyawanByNik = {};
     res.data.forEach(k => {
+      karyawanByNik[k.nik] = k;
       const tr = document.createElement('tr');
       tr.className = 'border-b last:border-0';
       tr.innerHTML = `<td class="py-2 pr-3">${k.nik}</td><td class="pr-3">${k.nama}</td>
         <td class="pr-3">${k.departemen}</td><td class="pr-3">${k.jabatan}</td>
+        <td class="pr-3"><button class="text-navy-700 text-xs font-medium underline" onclick="showEmployeeQr('${k.nik}')">🔳 Lihat QR</button></td>
         <td><button class="text-red-500 text-xs" onclick="deleteKaryawanAdmin('${k.nik}')">Hapus</button></td>`;
       body.appendChild(tr);
     });
@@ -881,6 +899,40 @@ function loadKaryawanList() {
 function deleteKaryawanAdmin(nik) {
   if (!confirm('Hapus karyawan NIK ' + nik + '?')) return;
   callServer('deleteKaryawan', { nik }).then(res => { toast(res.message, res.success ? 'success' : 'error'); loadKaryawanList(); });
+}
+
+// ---- QR Code viewer (generated client-side, on demand — the table
+// itself never generates QR codes up front, so it stays fast to load
+// no matter how many employees there are). ----
+let currentQrEmployee = null;
+function showEmployeeQr(nik) {
+  const k = karyawanByNik[nik];
+  if (!k) { toast('Data karyawan tidak ditemukan, coba refresh daftar.', 'error'); return; }
+  currentQrEmployee = k;
+  document.getElementById('qr-employee-nik').textContent = 'NIK: ' + k.nik;
+  document.getElementById('qr-employee-nama').textContent = k.nama;
+  const container = document.getElementById('qr-employee-canvas');
+  container.innerHTML = '';
+  new QRCode(container, {
+    text: k.qrCodeKey,
+    width: 200,
+    height: 200,
+    correctLevel: QRCode.CorrectLevel.M
+  });
+  document.getElementById('qr-employee-modal').classList.remove('hidden');
+}
+function closeEmployeeQrModal() {
+  document.getElementById('qr-employee-modal').classList.add('hidden');
+  currentQrEmployee = null;
+}
+function downloadEmployeeQr() {
+  if (!currentQrEmployee) return;
+  const canvas = document.querySelector('#qr-employee-canvas canvas');
+  if (!canvas) { toast('QR belum siap, coba lagi sesaat.', 'error'); return; }
+  const link = document.createElement('a');
+  link.download = 'QR_' + currentQrEmployee.nik + '_' + currentQrEmployee.nama.replace(/\s+/g, '_') + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 }
 
 function importKaryawanFile() {
