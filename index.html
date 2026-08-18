@@ -200,6 +200,7 @@
       <h2 class="text-xl font-bold text-navy-800 mb-4 text-center">🔐 Login Admin</h2>
       <input id="admin-password" type="password" placeholder="Password Admin" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3">
       <button onclick="adminLogin()" class="w-full bg-navy-700 text-white py-2 rounded-lg font-semibold hover:bg-navy-800">Masuk</button>
+      <button onclick="forgotAdminPassword()" class="w-full mt-3 text-emerald-600 text-sm font-medium">Lupa Password?</button>
       <button onclick="showView('landing')" class="w-full mt-2 text-slate-400 text-sm">Kembali</button>
     </div>
   </section>
@@ -276,16 +277,27 @@
       <div class="bg-white rounded-2xl shadow p-5 mb-4">
         <div class="flex flex-wrap gap-2 items-end">
           <div>
-            <label class="text-xs text-slate-400 block mb-1">Filter Cepat</label>
-            <select id="laporan-filter" class="border border-slate-300 rounded-lg px-3 py-2">
+            <label class="text-xs text-slate-400 block mb-1">Filter</label>
+            <select id="laporan-filter" class="border border-slate-300 rounded-lg px-3 py-2" onchange="onLaporanFilterChange()">
               <option value="hari_ini">Hari Ini</option>
               <option value="kemarin">Kemarin</option>
               <option value="minggu_ini">Minggu Ini</option>
               <option value="bulan_ini">Bulan Ini</option>
               <option value="3_bulan">3 Bulan Terakhir</option>
+              <option value="custom">Custom (pilih tanggal)...</option>
             </select>
           </div>
-          <button onclick="loadLaporan()" class="bg-navy-700 text-white px-4 py-2 rounded-lg font-medium">Tampilkan</button>
+          <div id="laporan-custom-range" class="hidden flex gap-2 items-end">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Dari Tanggal</label>
+              <input type="date" id="laporan-start-date" class="border border-slate-300 rounded-lg px-3 py-2">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Sampai Tanggal</label>
+              <input type="date" id="laporan-end-date" class="border border-slate-300 rounded-lg px-3 py-2">
+            </div>
+          </div>
+          <button onclick="loadLaporanWithSpinner()" class="bg-navy-700 text-white px-4 py-2 rounded-lg font-medium">Tampilkan</button>
           <button onclick="exportLaporanExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium">Export Excel</button>
           <button onclick="exportLaporanPdf()" class="bg-red-500 text-white px-4 py-2 rounded-lg font-medium">Export PDF</button>
           <label class="flex items-center gap-2 text-xs text-slate-500 ml-auto cursor-pointer select-none">
@@ -343,6 +355,16 @@
         </div>
         <button onclick="saveOfficeSettings()" class="w-full mt-4 bg-emerald-600 text-white py-2 rounded-lg font-semibold hover:bg-emerald-700">Simpan Pengaturan</button>
       </div>
+
+      <div class="bg-white rounded-2xl shadow p-5 max-w-2xl mt-4">
+        <h3 class="font-semibold text-navy-700 mb-1">Kontak Pemulihan Password</h3>
+        <p class="text-xs text-slate-400 mb-3">Dipakai saat menekan "Lupa Password?" di layar login admin. Email akan otomatis dikirimi password saat ini. Nomor WhatsApp hanya disimpan sebagai catatan — pengiriman otomatis ke WhatsApp belum aktif (butuh layanan pihak ketiga berbayar).</p>
+        <label class="text-xs text-slate-400">Email Admin</label>
+        <input id="set-admin-email" type="email" placeholder="admin@contoh.com" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3 text-sm">
+        <label class="text-xs text-slate-400">Nomor WhatsApp Admin</label>
+        <input id="set-admin-whatsapp" type="text" placeholder="081413333513" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3 text-sm">
+        <button onclick="saveRecoveryContact()" class="w-full bg-navy-700 text-white py-2 rounded-lg font-semibold hover:bg-navy-800">Simpan Kontak</button>
+      </div>
     </div>
 
 
@@ -360,7 +382,7 @@
 </main>
 
 <footer class="text-center text-xs text-slate-400 py-6">
-  HDIR &copy;2026 Ishbiruu Tech | 081413333513
+  HDIR &copy;2026 <a href="https://wied.web.id" target="_blank" rel="noopener" class="underline hover:text-emerald-600">Ishbiruu Tech</a> | <a href="https://wa.me/6281413333513?text=Assalamualaikum%20warahmatullahi%20wabarakatuh%20bagaimana%20dengan%20aplikasi%20kami%2C%20ada%20yang%20ingin%20ditanyakan..%20" target="_blank" rel="noopener" class="underline hover:text-emerald-600">081413333513</a>
 </footer>
 
 <script>
@@ -381,7 +403,7 @@
 // >>> WAJIB DIISI: tempel URL deployment Web App Apps Script kamu
 // di sini, yang diakhiri "/exec". Contoh:
 // const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwQdN32bb6y1LDxBS7Nrq-JvrimCUnraE-v4BT-lAngza3z5OY4GkJFEsL50mcu82z2/exec';
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbylkwvNrp8W6BeRHmGFuA6zDHhoRix_2xDcZN-1MyhQpuGPFk5adT7XXktopau5U_BS/exec';
 
 function callServer(action, params) {
   params = params || {};
@@ -835,6 +857,14 @@ function adminLogin() {
     loadKaryawanList();
   }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
 }
+function forgotAdminPassword() {
+  if (!confirm('Kirim password admin saat ini ke email admin yang terdaftar?')) return;
+  showLoading('Mengirim email...');
+  callServer('forgotPassword', {}).then(res => {
+    hideLoading();
+    toast(res.message, res.success ? 'success' : 'error');
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
 function adminLogout() { isAdmin = false; stopLaporanLivePolling(); showView('landing'); }
 
 function switchTab(name) {
@@ -961,9 +991,31 @@ function importKaryawanFile() {
 let lastLaporanData = [];
 let laporanLiveTimer = null;
 
+function onLaporanFilterChange() {
+  const isCustom = document.getElementById('laporan-filter').value === 'custom';
+  document.getElementById('laporan-custom-range').classList.toggle('hidden', !isCustom);
+  if (isCustom) {
+    const startEl = document.getElementById('laporan-start-date');
+    const endEl = document.getElementById('laporan-end-date');
+    if (!endEl.value) endEl.value = new Date().toISOString().slice(0, 10);
+    if (!startEl.value) startEl.value = endEl.value;
+  }
+}
+
 function loadLaporan() {
   const filter = document.getElementById('laporan-filter').value;
-  callServer('getLaporan', { filter }).then(res => {
+  const params = { filter };
+
+  if (filter === 'custom') {
+    const startDate = document.getElementById('laporan-start-date').value;
+    const endDate = document.getElementById('laporan-end-date').value;
+    if (!startDate || !endDate) { toast('Pilih tanggal mulai dan tanggal akhir dulu.', 'error'); return; }
+    if (startDate > endDate) { toast('Tanggal mulai tidak boleh setelah tanggal akhir.', 'error'); return; }
+    params.startDate = startDate;
+    params.endDate = endDate;
+  }
+
+  callServer('getLaporan', params).then(res => {
     const body = document.getElementById('laporan-table-body');
     const emptyNote = document.getElementById('laporan-empty-note');
     body.innerHTML = '';
@@ -1111,6 +1163,8 @@ function loadOfficeSettingsIntoForm() {
     const lat = parseFloat(res.data.latitudeKantor);
     const lon = parseFloat(res.data.longitudeKantor);
     document.getElementById('set-radius').value = res.data.radiusMaksimalMeter;
+    document.getElementById('set-admin-email').value = res.data.adminEmail || '';
+    document.getElementById('set-admin-whatsapp').value = res.data.adminWhatsapp || '';
     if (!isNaN(lat) && !isNaN(lon)) {
       setOfficeLocation(lat, lon, true);
     }
@@ -1132,6 +1186,15 @@ function saveOfficeSettings() {
     toast('Lengkapi koordinat dan radius terlebih dahulu.', 'error'); return;
   }
   showLoading('Menyimpan pengaturan...');
+  callServer('saveSettings', payload).then(res => { hideLoading(); toast(res.message, res.success ? 'success' : 'error'); })
+    .catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+function saveRecoveryContact() {
+  const payload = {
+    adminEmail: document.getElementById('set-admin-email').value.trim(),
+    adminWhatsapp: document.getElementById('set-admin-whatsapp').value.trim()
+  };
+  showLoading('Menyimpan kontak...');
   callServer('saveSettings', payload).then(res => { hideLoading(); toast(res.message, res.success ? 'success' : 'error'); })
     .catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
 }
