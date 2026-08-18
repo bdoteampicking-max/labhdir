@@ -200,8 +200,14 @@
       <h2 class="text-xl font-bold text-navy-800 mb-4 text-center">🔐 Login Admin</h2>
       <input id="admin-password" type="password" placeholder="Password Admin" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3">
       <button onclick="adminLogin()" class="w-full bg-navy-700 text-white py-2 rounded-lg font-semibold hover:bg-navy-800">Masuk</button>
-      <button onclick="forgotAdminPassword()" class="w-full mt-3 text-emerald-600 text-sm font-medium">Lupa Password?</button>
+      <button onclick="toggleForgotPassword()" class="w-full mt-2 text-emerald-600 text-sm font-medium">Lupa Password?</button>
       <button onclick="showView('landing')" class="w-full mt-2 text-slate-400 text-sm">Kembali</button>
+
+      <!-- Lupa Password panel -->
+      <div id="forgot-password-panel" class="hidden mt-4 pt-4 border-t border-slate-200">
+        <p class="text-xs text-slate-500 mb-3">Password akan dikirim ke email dan/atau nomor WhatsApp admin yang terdaftar di sistem.</p>
+        <button id="btn-forgot-send" onclick="sendForgotPassword()" class="w-full bg-emerald-600 text-white py-2 rounded-lg font-semibold hover:bg-emerald-700">📧 Kirim Password</button>
+      </div>
     </div>
   </section>
 
@@ -277,27 +283,27 @@
       <div class="bg-white rounded-2xl shadow p-5 mb-4">
         <div class="flex flex-wrap gap-2 items-end">
           <div>
-            <label class="text-xs text-slate-400 block mb-1">Filter</label>
+            <label class="text-xs text-slate-400 block mb-1">Filter Cepat</label>
             <select id="laporan-filter" class="border border-slate-300 rounded-lg px-3 py-2" onchange="onLaporanFilterChange()">
               <option value="hari_ini">Hari Ini</option>
               <option value="kemarin">Kemarin</option>
               <option value="minggu_ini">Minggu Ini</option>
               <option value="bulan_ini">Bulan Ini</option>
               <option value="3_bulan">3 Bulan Terakhir</option>
-              <option value="custom">Custom (pilih tanggal)...</option>
+              <option value="custom">📅 Custom (Rentang Tanggal)</option>
             </select>
           </div>
           <div id="laporan-custom-range" class="hidden flex gap-2 items-end">
             <div>
               <label class="text-xs text-slate-400 block mb-1">Dari Tanggal</label>
-              <input type="date" id="laporan-start-date" class="border border-slate-300 rounded-lg px-3 py-2">
+              <input id="laporan-start-date" type="date" class="border border-slate-300 rounded-lg px-3 py-2">
             </div>
             <div>
               <label class="text-xs text-slate-400 block mb-1">Sampai Tanggal</label>
-              <input type="date" id="laporan-end-date" class="border border-slate-300 rounded-lg px-3 py-2">
+              <input id="laporan-end-date" type="date" class="border border-slate-300 rounded-lg px-3 py-2">
             </div>
           </div>
-          <button onclick="loadLaporanWithSpinner()" class="bg-navy-700 text-white px-4 py-2 rounded-lg font-medium">Tampilkan</button>
+          <button onclick="loadLaporan()" class="bg-navy-700 text-white px-4 py-2 rounded-lg font-medium">Tampilkan</button>
           <button onclick="exportLaporanExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium">Export Excel</button>
           <button onclick="exportLaporanPdf()" class="bg-red-500 text-white px-4 py-2 rounded-lg font-medium">Export PDF</button>
           <label class="flex items-center gap-2 text-xs text-slate-500 ml-auto cursor-pointer select-none">
@@ -355,26 +361,26 @@
         </div>
         <button onclick="saveOfficeSettings()" class="w-full mt-4 bg-emerald-600 text-white py-2 rounded-lg font-semibold hover:bg-emerald-700">Simpan Pengaturan</button>
       </div>
-
-      <div class="bg-white rounded-2xl shadow p-5 max-w-2xl mt-4">
-        <h3 class="font-semibold text-navy-700 mb-1">Kontak Pemulihan Password</h3>
-        <p class="text-xs text-slate-400 mb-3">Dipakai saat menekan "Lupa Password?" di layar login admin. Email akan otomatis dikirimi password saat ini. Nomor WhatsApp hanya disimpan sebagai catatan — pengiriman otomatis ke WhatsApp belum aktif (butuh layanan pihak ketiga berbayar).</p>
-        <label class="text-xs text-slate-400">Email Admin</label>
-        <input id="set-admin-email" type="email" placeholder="admin@contoh.com" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3 text-sm">
-        <label class="text-xs text-slate-400">Nomor WhatsApp Admin</label>
-        <input id="set-admin-whatsapp" type="text" placeholder="081413333513" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3 text-sm">
-        <button onclick="saveRecoveryContact()" class="w-full bg-navy-700 text-white py-2 rounded-lg font-semibold hover:bg-navy-800">Simpan Kontak</button>
-      </div>
     </div>
 
 
     <!-- TAB: Password -->
     <div id="tab-password" class="tab-panel hidden">
-      <div class="bg-white rounded-2xl shadow p-5 max-w-md">
+      <div class="bg-white rounded-2xl shadow p-5 max-w-md mb-4">
         <h3 class="font-semibold text-navy-700 mb-3">Ubah Password Admin</h3>
         <input id="pw-old" type="password" placeholder="Password Lama" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3">
         <input id="pw-new" type="password" placeholder="Password Baru" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3">
         <button onclick="changePassword()" class="w-full bg-navy-700 text-white py-2 rounded-lg font-semibold">Ubah Password</button>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-5 max-w-md">
+        <h3 class="font-semibold text-navy-700 mb-1">Kontak Pemulihan Password</h3>
+        <p class="text-xs text-slate-400 mb-3">Digunakan saat menekan "Lupa Password?" di halaman login — password akan dikirim ke email dan/atau nomor WhatsApp ini.</p>
+        <label class="text-xs text-slate-400">Email Admin</label>
+        <input id="admin-email" type="email" placeholder="admin@email.com" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3">
+        <label class="text-xs text-slate-400">No. WhatsApp Admin</label>
+        <input id="admin-wa" type="text" placeholder="08xxxxxxxxxx" class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-3">
+        <button onclick="saveAdminContact()" class="w-full bg-emerald-600 text-white py-2 rounded-lg font-semibold hover:bg-emerald-700">Simpan Kontak</button>
       </div>
     </div>
   </section>
@@ -382,7 +388,7 @@
 </main>
 
 <footer class="text-center text-xs text-slate-400 py-6">
-  HDIR &copy;2026 <a href="https://wied.web.id" target="_blank" rel="noopener" class="underline hover:text-emerald-600">Ishbiruu Tech</a> | <a href="https://wa.me/6281413333513?text=Assalamualaikum%20warahmatullahi%20wabarakatuh%20bagaimana%20dengan%20aplikasi%20kami%2C%20ada%20yang%20ingin%20ditanyakan..%20" target="_blank" rel="noopener" class="underline hover:text-emerald-600">081413333513</a>
+  HDIR &copy;2026 <a href="https://wied.web.id" target="_blank" rel="noopener" class="hover:text-emerald-600 underline">Ishbiruu Tech</a> | <a href="#" onclick="openDeveloperWhatsApp(); return false;" class="hover:text-emerald-600 underline">081413333513</a>
 </footer>
 
 <script>
@@ -457,6 +463,12 @@ function showLoading(text) {
   document.getElementById('global-loading').classList.remove('hidden');
 }
 function hideLoading() { document.getElementById('global-loading').classList.add('hidden'); }
+
+function openDeveloperWhatsApp() {
+  const phone = '6281413333513'; // 081413333513 in international format
+  const text = encodeURIComponent('Assalamualaikum warahmatullahi wabarakatuh bagaimana dengan aplikasi kami, ada yang ingin ditanyakan.. ');
+  window.open('https://wa.me/' + phone + '?text=' + text, '_blank');
+}
 
 // ---------- Digital clock ----------
 function tickClock() {
@@ -857,15 +869,21 @@ function adminLogin() {
     loadKaryawanList();
   }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
 }
-function forgotAdminPassword() {
-  if (!confirm('Kirim password admin saat ini ke email admin yang terdaftar?')) return;
-  showLoading('Mengirim email...');
+function adminLogout() { isAdmin = false; stopLaporanLivePolling(); showView('landing'); }
+
+function toggleForgotPassword() {
+  document.getElementById('forgot-password-panel').classList.toggle('hidden');
+}
+function sendForgotPassword() {
+  const btn = document.getElementById('btn-forgot-send');
+  btn.disabled = true;
+  showLoading('Mengirim password...');
   callServer('forgotPassword', {}).then(res => {
     hideLoading();
+    btn.disabled = false;
     toast(res.message, res.success ? 'success' : 'error');
-  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+  }).catch(err => { hideLoading(); btn.disabled = false; toast('Gagal: ' + err.message, 'error'); });
 }
-function adminLogout() { isAdmin = false; stopLaporanLivePolling(); showView('landing'); }
 
 function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
@@ -884,6 +902,7 @@ function switchTab(name) {
     stopLaporanLivePolling(); // don't keep polling in the background on other tabs
   }
   if (name === 'settings') loadOfficeSettingsIntoForm();
+  if (name === 'password') loadAdminContactIntoForm();
 }
 
 // ---- Karyawan management ----
@@ -992,29 +1011,29 @@ let lastLaporanData = [];
 let laporanLiveTimer = null;
 
 function onLaporanFilterChange() {
-  const isCustom = document.getElementById('laporan-filter').value === 'custom';
-  document.getElementById('laporan-custom-range').classList.toggle('hidden', !isCustom);
-  if (isCustom) {
-    const startEl = document.getElementById('laporan-start-date');
-    const endEl = document.getElementById('laporan-end-date');
-    if (!endEl.value) endEl.value = new Date().toISOString().slice(0, 10);
-    if (!startEl.value) startEl.value = endEl.value;
+  const filter = document.getElementById('laporan-filter').value;
+  const rangeBox = document.getElementById('laporan-custom-range');
+  if (filter === 'custom') {
+    rangeBox.classList.remove('hidden');
+    // Live toggle doesn't make sense while manually picking a range —
+    // avoid it silently reloading the "hari ini" data mid-selection.
+    const liveToggle = document.getElementById('laporan-live-toggle');
+    if (liveToggle.checked) { liveToggle.checked = false; toggleLaporanLive(); }
+  } else {
+    rangeBox.classList.add('hidden');
   }
 }
 
 function loadLaporan() {
   const filter = document.getElementById('laporan-filter').value;
-  const params = { filter };
-
+  let params = { filter };
   if (filter === 'custom') {
     const startDate = document.getElementById('laporan-start-date').value;
     const endDate = document.getElementById('laporan-end-date').value;
-    if (!startDate || !endDate) { toast('Pilih tanggal mulai dan tanggal akhir dulu.', 'error'); return; }
-    if (startDate > endDate) { toast('Tanggal mulai tidak boleh setelah tanggal akhir.', 'error'); return; }
-    params.startDate = startDate;
-    params.endDate = endDate;
+    if (!startDate || !endDate) { toast('Pilih tanggal awal dan akhir terlebih dahulu.', 'error'); return; }
+    if (startDate > endDate) { toast('Tanggal awal tidak boleh setelah tanggal akhir.', 'error'); return; }
+    params = { startDate, endDate };
   }
-
   callServer('getLaporan', params).then(res => {
     const body = document.getElementById('laporan-table-body');
     const emptyNote = document.getElementById('laporan-empty-note');
@@ -1163,8 +1182,6 @@ function loadOfficeSettingsIntoForm() {
     const lat = parseFloat(res.data.latitudeKantor);
     const lon = parseFloat(res.data.longitudeKantor);
     document.getElementById('set-radius').value = res.data.radiusMaksimalMeter;
-    document.getElementById('set-admin-email').value = res.data.adminEmail || '';
-    document.getElementById('set-admin-whatsapp').value = res.data.adminWhatsapp || '';
     if (!isNaN(lat) && !isNaN(lon)) {
       setOfficeLocation(lat, lon, true);
     }
@@ -1189,15 +1206,6 @@ function saveOfficeSettings() {
   callServer('saveSettings', payload).then(res => { hideLoading(); toast(res.message, res.success ? 'success' : 'error'); })
     .catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
 }
-function saveRecoveryContact() {
-  const payload = {
-    adminEmail: document.getElementById('set-admin-email').value.trim(),
-    adminWhatsapp: document.getElementById('set-admin-whatsapp').value.trim()
-  };
-  showLoading('Menyimpan kontak...');
-  callServer('saveSettings', payload).then(res => { hideLoading(); toast(res.message, res.success ? 'success' : 'error'); })
-    .catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
-}
 function changePassword() {
   const oldPassword = document.getElementById('pw-old').value;
   const newPassword = document.getElementById('pw-new').value;
@@ -1207,6 +1215,23 @@ function changePassword() {
     hideLoading();
     toast(res.message, res.success ? 'success' : 'error');
     if (res.success) { document.getElementById('pw-old').value = ''; document.getElementById('pw-new').value = ''; }
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+
+function loadAdminContactIntoForm() {
+  callServer('getAdminContact', {}).then(res => {
+    if (!res.success) return;
+    document.getElementById('admin-email').value = res.data.email || '';
+    document.getElementById('admin-wa').value = res.data.whatsapp || '';
+  });
+}
+function saveAdminContact() {
+  const email = document.getElementById('admin-email').value.trim();
+  const whatsapp = document.getElementById('admin-wa').value.trim();
+  showLoading('Menyimpan kontak...');
+  callServer('saveAdminContact', { email, whatsapp }).then(res => {
+    hideLoading();
+    toast(res.message, res.success ? 'success' : 'error');
   }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
 }
 </script>
