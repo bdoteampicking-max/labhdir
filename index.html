@@ -75,12 +75,84 @@
         <button onclick="showView('riwayat')" class="bg-white border border-slate-300 hover:bg-slate-100 text-navy-700 font-semibold px-8 py-4 rounded-xl shadow transition">
           🕘 Cek Riwayat Saya
         </button>
+        <button onclick="showView('cutiSaya'); loadCutiSayaList();" class="bg-white border border-slate-300 hover:bg-slate-100 text-navy-700 font-semibold px-8 py-4 rounded-xl shadow transition">
+          📅 Cuti &amp; Izin Saya
+        </button>
+        <button onclick="showView('lowonganPublic'); loadLowonganPublicList();" class="bg-white border border-slate-300 hover:bg-slate-100 text-navy-700 font-semibold px-8 py-4 rounded-xl shadow transition">
+          🧑‍💼 Lowongan Kerja
+        </button>
         <button onclick="showView('adminLogin')" class="bg-navy-700 hover:bg-navy-800 text-white font-semibold px-8 py-4 rounded-xl shadow-lg transition">
           🔐 Login Admin
         </button>
       </div>
     </div>
   </section>
+
+  <!-- ================= CUTI & IZIN SAYA (self-service) ================= -->
+  <section id="view-cutiSaya" class="view">
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-navy-800">Cuti &amp; Izin Saya</h2>
+        <button onclick="showView('landing')" class="text-slate-400 hover:text-slate-600 text-sm">✕ Tutup</button>
+      </div>
+      <div class="flex gap-2 mb-4">
+        <input id="cs-nik" type="text" placeholder="Masukkan NIK Anda" class="flex-1 border border-slate-300 rounded-lg px-3 py-2">
+        <button onclick="loadCutiSayaList()" class="bg-navy-700 text-white px-4 py-2 rounded-lg font-medium hover:bg-navy-800">Cek</button>
+      </div>
+      <div id="cs-kuota-box" class="hidden mb-4 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm text-emerald-800"></div>
+
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+        <h3 class="font-semibold text-navy-700 mb-2 text-sm">Ajukan Cuti / Izin Baru</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+          <select id="cs-jenis" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            <option>Cuti Tahunan</option><option>Izin</option><option>Sakit</option><option>Cuti Melahirkan</option><option>Lainnya</option>
+          </select>
+          <div></div>
+          <div><label class="text-xs text-slate-400">Tanggal Mulai</label><input id="cs-mulai" type="date" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"></div>
+          <div><label class="text-xs text-slate-400">Tanggal Selesai</label><input id="cs-selesai" type="date" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"></div>
+        </div>
+        <textarea id="cs-alasan" placeholder="Alasan" rows="2" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-2"></textarea>
+        <button onclick="submitCutiSaya()" class="w-full bg-emerald-600 text-white py-2 rounded-lg font-semibold hover:bg-emerald-700 text-sm">Kirim Pengajuan</button>
+      </div>
+
+      <div id="cs-list" class="space-y-2 text-sm"></div>
+    </div>
+  </section>
+
+  <!-- ================= LOWONGAN KERJA (public) ================= -->
+  <section id="view-lowonganPublic" class="view">
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-navy-800">Lowongan Kerja</h2>
+        <button onclick="showView('landing')" class="text-slate-400 hover:text-slate-600 text-sm">✕ Tutup</button>
+      </div>
+      <div id="lp-list" class="space-y-3"></div>
+    </div>
+  </section>
+
+  <!-- Apply modal -->
+  <div id="apply-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
+    <div class="bg-white rounded-2xl shadow-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+      <h3 class="font-semibold text-navy-700 mb-1">Lamar Posisi: <span id="apply-posisi-label"></span></h3>
+      <input type="hidden" id="apply-lowongan-id">
+      <input type="hidden" id="apply-posisi">
+      <div class="grid grid-cols-1 gap-2 mt-3">
+        <input id="apply-nama" placeholder="Nama Lengkap" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+        <input id="apply-email" type="email" placeholder="Email" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+        <input id="apply-nohp" placeholder="No. HP / WhatsApp" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+        <input id="apply-pendidikan" placeholder="Pendidikan Terakhir" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+        <textarea id="apply-pengalaman" placeholder="Pengalaman Kerja (ringkas)" rows="2" class="border border-slate-300 rounded-lg px-3 py-2 text-sm"></textarea>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Unggah CV (PDF)</label>
+          <input id="apply-cv" type="file" accept="application/pdf" class="text-sm">
+        </div>
+      </div>
+      <div class="flex gap-2 mt-4">
+        <button onclick="submitLamaran()" class="flex-1 bg-emerald-600 text-white py-2 rounded-lg font-semibold text-sm">Kirim Lamaran</button>
+        <button onclick="closeApplyModal()" class="flex-1 border border-slate-300 text-slate-600 py-2 rounded-lg font-medium text-sm">Batal</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ================= FORM ABSENSI VIEW ================= -->
   <section id="view-absensi" class="view">
@@ -221,6 +293,11 @@
     <div class="flex flex-wrap gap-2 mb-5 border-b border-slate-200">
       <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-emerald-600 text-emerald-700" data-tab="karyawan" onclick="switchTab('karyawan')">👥 Data Karyawan</button>
       <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-transparent text-slate-500" data-tab="laporan" onclick="switchTab('laporan')">📊 Laporan Absensi</button>
+      <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-transparent text-slate-500" data-tab="rekrutmen" onclick="switchTab('rekrutmen')">🧑‍💼 Rekrutmen</button>
+      <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-transparent text-slate-500" data-tab="cuti" onclick="switchTab('cuti')">📅 Cuti &amp; Izin</button>
+      <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-transparent text-slate-500" data-tab="payroll" onclick="switchTab('payroll')">💰 Payroll</button>
+      <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-transparent text-slate-500" data-tab="performance" onclick="switchTab('performance')">📈 Performance</button>
+      <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-transparent text-slate-500" data-tab="laporanhr" onclick="switchTab('laporanhr')">🗂️ Laporan HR</button>
       <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-transparent text-slate-500" data-tab="settings" onclick="switchTab('settings')">⚙️ Pengaturan Kantor</button>
       <button class="tab-btn px-4 py-2 font-medium text-sm border-b-2 border-transparent text-slate-500" data-tab="password" onclick="switchTab('password')">🔑 Ubah Password</button>
     </div>
@@ -278,6 +355,28 @@
       </div>
     </div>
 
+    <!-- Edit Karyawan modal -->
+    <div id="edit-karyawan-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
+      <div class="bg-white rounded-2xl shadow-xl p-6 max-w-lg w-full">
+        <h3 class="font-semibold text-navy-700 mb-3">Edit Data Karyawan</h3>
+        <input type="hidden" id="ek-nik-hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div><label class="text-xs text-slate-400">NIK</label><input id="ek-nik" disabled class="w-full border border-slate-200 bg-slate-100 rounded-lg px-3 py-2"></div>
+          <div><label class="text-xs text-slate-400">Nama</label><input id="ek-nama" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+          <div><label class="text-xs text-slate-400">Alamat</label><input id="ek-alamat" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+          <div><label class="text-xs text-slate-400">Tempat Lahir</label><input id="ek-tempatlahir" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+          <div><label class="text-xs text-slate-400">Tanggal Lahir</label><input id="ek-tanggallahir" type="date" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+          <div><label class="text-xs text-slate-400">Departemen</label><input id="ek-departemen" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+          <div><label class="text-xs text-slate-400">Jabatan</label><input id="ek-jabatan" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+          <div><label class="text-xs text-slate-400">Keterangan</label><input id="ek-keterangan" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <button onclick="saveEditKaryawan()" class="flex-1 bg-emerald-600 text-white py-2 rounded-lg font-semibold">💾 Simpan Perubahan</button>
+          <button onclick="closeEditKaryawanModal()" class="flex-1 border border-slate-300 text-slate-600 py-2 rounded-lg font-medium">Batal</button>
+        </div>
+      </div>
+    </div>
+
     <!-- TAB: Laporan -->
     <div id="tab-laporan" class="tab-panel hidden">
       <div class="bg-white rounded-2xl shadow p-5 mb-4">
@@ -326,6 +425,197 @@
           <p id="laporan-empty-note" class="hidden text-center text-slate-400 py-6 text-sm">Belum ada data absensi pada rentang ini.</p>
         </div>
       </div>
+    </div>
+
+    <!-- TAB: Rekrutmen -->
+    <div id="tab-rekrutmen" class="tab-panel hidden">
+      <div class="flex flex-wrap gap-2 mb-4 border-b border-slate-200">
+        <button class="subtab-btn px-3 py-1.5 text-sm font-medium border-b-2 border-emerald-600 text-emerald-700" data-subtab="lowongan" onclick="switchRekrutmenSubtab('lowongan')">Lowongan</button>
+        <button class="subtab-btn px-3 py-1.5 text-sm font-medium border-b-2 border-transparent text-slate-500" data-subtab="pelamar" onclick="switchRekrutmenSubtab('pelamar')">Pelamar</button>
+      </div>
+
+      <div id="subtab-lowongan">
+        <div class="bg-white rounded-2xl shadow p-5 mb-4">
+          <h3 class="font-semibold text-navy-700 mb-3">Buka Lowongan Baru</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input id="low-posisi" placeholder="Nama Posisi" class="border border-slate-300 rounded-lg px-3 py-2">
+            <input id="low-departemen" placeholder="Departemen" class="border border-slate-300 rounded-lg px-3 py-2">
+            <select id="low-jenis" class="border border-slate-300 rounded-lg px-3 py-2">
+              <option>Full-time</option><option>Part-time</option><option>Kontrak</option><option>Magang</option>
+            </select>
+            <input id="low-tanggaltutup" type="date" placeholder="Tanggal Tutup" class="border border-slate-300 rounded-lg px-3 py-2">
+            <textarea id="low-deskripsi" placeholder="Deskripsi pekerjaan" class="border border-slate-300 rounded-lg px-3 py-2 md:col-span-2" rows="2"></textarea>
+            <textarea id="low-kualifikasi" placeholder="Kualifikasi" class="border border-slate-300 rounded-lg px-3 py-2 md:col-span-2" rows="2"></textarea>
+          </div>
+          <button onclick="addLowonganAdmin()" class="mt-3 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700">+ Buka Lowongan</button>
+        </div>
+        <div class="bg-white rounded-2xl shadow p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-navy-700">Daftar Lowongan</h3>
+            <button onclick="loadLowonganList()" class="text-xs text-emerald-600">↻ Refresh</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="text-left text-slate-400 border-b">
+                <th class="py-2 pr-3">Posisi</th><th class="pr-3">Dept</th><th class="pr-3">Jenis</th>
+                <th class="pr-3">Status</th><th class="pr-3">Tutup</th><th class="pr-3">Pelamar</th><th></th>
+              </tr></thead>
+              <tbody id="lowongan-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="subtab-pelamar" class="hidden">
+        <div class="bg-white rounded-2xl shadow p-5 mb-4 flex flex-wrap gap-2 items-end">
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Filter Lowongan</label>
+            <select id="pelamar-filter-lowongan" class="border border-slate-300 rounded-lg px-3 py-2" onchange="loadPelamarList()"><option value="">Semua Lowongan</option></select>
+          </div>
+          <button onclick="loadPelamarList()" class="text-xs text-emerald-600">↻ Refresh</button>
+        </div>
+        <div class="bg-white rounded-2xl shadow p-5">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="text-left text-slate-400 border-b">
+                <th class="py-2 pr-3">Nama</th><th class="pr-3">Posisi</th><th class="pr-3">Kontak</th>
+                <th class="pr-3">CV</th><th class="pr-3">Status</th><th></th>
+              </tr></thead>
+              <tbody id="pelamar-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Cuti & Izin -->
+    <div id="tab-cuti" class="tab-panel hidden">
+      <div class="bg-white rounded-2xl shadow p-5 mb-4 flex flex-wrap gap-2 items-end">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Filter Status</label>
+          <select id="cuti-filter-status" class="border border-slate-300 rounded-lg px-3 py-2" onchange="loadCutiList()">
+            <option value="">Semua Status</option>
+            <option value="Menunggu">Menunggu</option>
+            <option value="Disetujui">Disetujui</option>
+            <option value="Ditolak">Ditolak</option>
+          </select>
+        </div>
+        <button onclick="loadCutiList()" class="text-xs text-emerald-600 mb-2">↻ Refresh</button>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-5">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="text-left text-slate-400 border-b">
+              <th class="py-2 pr-3">Nama</th><th class="pr-3">Jenis</th><th class="pr-3">Tanggal</th>
+              <th class="pr-3">Hari</th><th class="pr-3">Alasan</th><th class="pr-3">Status</th><th></th>
+            </tr></thead>
+            <tbody id="cuti-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Payroll -->
+    <div id="tab-payroll" class="tab-panel hidden">
+      <div class="bg-white rounded-2xl shadow p-5 mb-4">
+        <h3 class="font-semibold text-navy-700 mb-3">Komponen Gaji Karyawan</h3>
+        <div class="flex flex-wrap gap-2 items-end mb-3">
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Pilih Karyawan</label>
+            <select id="gaji-nik" class="border border-slate-300 rounded-lg px-3 py-2" onchange="loadGajiKaryawanForm()"><option value="">-- Pilih NIK --</option></select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div><label class="text-xs text-slate-400">Gaji Pokok</label><input id="gaji-pokok" type="number" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+          <div><label class="text-xs text-slate-400">Tunjangan Jabatan</label><input id="gaji-tunjangan-jabatan" type="number" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+          <div><label class="text-xs text-slate-400">Tunjangan Transport</label><input id="gaji-tunjangan-transport" type="number" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+          <div><label class="text-xs text-slate-400">Tunjangan Makan</label><input id="gaji-tunjangan-makan" type="number" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+          <div><label class="text-xs text-slate-400">Potongan BPJS</label><input id="gaji-potongan-bpjs" type="number" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+          <div><label class="text-xs text-slate-400">Potongan Lain</label><input id="gaji-potongan-lain" type="number" class="w-full border border-slate-300 rounded-lg px-3 py-2"></div>
+        </div>
+        <button onclick="saveGajiKaryawanAdmin()" class="mt-3 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700">💾 Simpan Komponen Gaji</button>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-5 mb-4">
+        <h3 class="font-semibold text-navy-700 mb-3">Generate Slip Gaji Bulanan</h3>
+        <div class="flex flex-wrap gap-2 items-end">
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Periode</label>
+            <input id="payroll-periode" type="month" class="border border-slate-300 rounded-lg px-3 py-2">
+          </div>
+          <button onclick="generatePayrollAdmin()" class="bg-navy-700 text-white px-4 py-2 rounded-lg font-medium">⚙️ Generate Payroll</button>
+          <button onclick="loadPayrollList()" class="bg-white border border-slate-300 text-navy-700 px-4 py-2 rounded-lg font-medium">Tampilkan</button>
+          <button onclick="exportPayrollExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium">Export Excel</button>
+        </div>
+        <p class="text-xs text-slate-400 mt-2">Perhitungan otomatis: gaji pokok + tunjangan − potongan (BPJS/lain) − potongan absensi (proporsional dari jumlah hari Alpha pada periode berjalan).</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow p-5">
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead><tr class="text-left text-slate-400 border-b">
+              <th class="py-2 pr-3">Periode</th><th class="pr-3">Nama</th><th class="pr-3">Dept</th>
+              <th class="pr-3">Gaji Pokok</th><th class="pr-3">Tunjangan</th><th class="pr-3">Hadir/Kerja</th>
+              <th class="pr-3">Potongan</th><th class="pr-3">Gaji Bersih</th><th class="pr-3">Status</th><th></th>
+            </tr></thead>
+            <tbody id="payroll-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Performance -->
+    <div id="tab-performance" class="tab-panel hidden">
+      <div class="bg-white rounded-2xl shadow p-5 mb-4">
+        <h3 class="font-semibold text-navy-700 mb-3">Input Penilaian Kinerja</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <select id="prf-nik" class="border border-slate-300 rounded-lg px-3 py-2"><option value="">-- Pilih Karyawan --</option></select>
+          <input id="prf-periode" placeholder="Periode (mis. 2026-Q3)" class="border border-slate-300 rounded-lg px-3 py-2">
+          <textarea id="prf-target" placeholder="Target" class="border border-slate-300 rounded-lg px-3 py-2" rows="2"></textarea>
+          <textarea id="prf-pencapaian" placeholder="Pencapaian" class="border border-slate-300 rounded-lg px-3 py-2" rows="2"></textarea>
+          <input id="prf-nilai" type="number" min="0" max="100" placeholder="Nilai (0-100)" class="border border-slate-300 rounded-lg px-3 py-2">
+          <input id="prf-penilai" placeholder="Penilai" class="border border-slate-300 rounded-lg px-3 py-2">
+          <textarea id="prf-catatan" placeholder="Catatan" class="border border-slate-300 rounded-lg px-3 py-2 md:col-span-2" rows="2"></textarea>
+        </div>
+        <button onclick="addPerformanceAdmin()" class="mt-3 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700">+ Simpan Penilaian</button>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-navy-700">Riwayat Penilaian</h3>
+          <button onclick="loadPerformanceList()" class="text-xs text-emerald-600">↻ Refresh</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="text-left text-slate-400 border-b">
+              <th class="py-2 pr-3">Nama</th><th class="pr-3">Periode</th><th class="pr-3">Nilai</th>
+              <th class="pr-3">Kategori</th><th class="pr-3">Penilai</th><th></th>
+            </tr></thead>
+            <tbody id="performance-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Laporan HR -->
+    <div id="tab-laporanhr" class="tab-panel hidden">
+      <div class="bg-white rounded-2xl shadow p-5 mb-4">
+        <div class="flex flex-wrap gap-2 items-end">
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Rentang Tanggal (Absensi/Cuti)</label>
+            <div class="flex gap-2">
+              <input id="hr-start-date" type="date" class="border border-slate-300 rounded-lg px-3 py-2">
+              <input id="hr-end-date" type="date" class="border border-slate-300 rounded-lg px-3 py-2">
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Periode (Payroll/Performance)</label>
+            <input id="hr-periode" type="month" class="border border-slate-300 rounded-lg px-3 py-2">
+          </div>
+          <button onclick="loadLaporanHR()" class="bg-navy-700 text-white px-4 py-2 rounded-lg font-medium">Tampilkan</button>
+          <button onclick="exportLaporanHRExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium">Export Excel</button>
+        </div>
+      </div>
+      <div id="laporanhr-content" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
     </div>
 
 
@@ -409,7 +699,7 @@
 // >>> WAJIB DIISI: tempel URL deployment Web App Apps Script kamu
 // di sini, yang diakhiri "/exec". Contoh:
 // const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwQdN32bb6y1LDxBS7Nrq-JvrimCUnraE-v4BT-lAngza3z5OY4GkJFEsL50mcu82z2/exec';
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbylkwvNrp8W6BeRHmGFuA6zDHhoRix_2xDcZN-1MyhQpuGPFk5adT7XXktopau5U_BS/exec';
 
 function callServer(action, params) {
   params = params || {};
@@ -903,6 +1193,20 @@ function switchTab(name) {
   }
   if (name === 'settings') loadOfficeSettingsIntoForm();
   if (name === 'password') loadAdminContactIntoForm();
+  if (name === 'rekrutmen') { loadLowonganList(); loadPelamarList(); }
+  if (name === 'cuti') loadCutiList();
+  if (name === 'payroll') { populateKaryawanSelect_('gaji-nik'); loadPayrollList(); }
+  if (name === 'performance') { populateKaryawanSelect_('prf-nik'); loadPerformanceList(); }
+  if (name === 'laporanhr') loadLaporanHR();
+}
+
+function switchRekrutmenSubtab(name) {
+  document.getElementById('subtab-lowongan').classList.toggle('hidden', name !== 'lowongan');
+  document.getElementById('subtab-pelamar').classList.toggle('hidden', name !== 'pelamar');
+  document.querySelectorAll('.subtab-btn').forEach(b => {
+    b.className = 'subtab-btn px-3 py-1.5 text-sm font-medium border-b-2 ' +
+      (b.dataset.subtab === name ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500');
+  });
 }
 
 // ---- Karyawan management ----
@@ -940,7 +1244,7 @@ function loadKaryawanList() {
       tr.innerHTML = `<td class="py-2 pr-3">${k.nik}</td><td class="pr-3">${k.nama}</td>
         <td class="pr-3">${k.departemen}</td><td class="pr-3">${k.jabatan}</td>
         <td class="pr-3"><button class="text-navy-700 text-xs font-medium underline" onclick="showEmployeeQr('${k.nik}')">🔳 Lihat QR</button></td>
-        <td><button class="text-red-500 text-xs" onclick="deleteKaryawanAdmin('${k.nik}')">Hapus</button></td>`;
+        <td class="whitespace-nowrap"><button class="text-emerald-600 text-xs font-medium mr-2" onclick="openEditKaryawanModal('${k.nik}')">✏️ Edit</button><button class="text-red-500 text-xs" onclick="deleteKaryawanAdmin('${k.nik}')">Hapus</button></td>`;
       body.appendChild(tr);
     });
   });
@@ -1233,6 +1537,506 @@ function saveAdminContact() {
     hideLoading();
     toast(res.message, res.success ? 'success' : 'error');
   }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+
+// ============================================================
+// EDIT KARYAWAN (Data Karyawan)
+// ============================================================
+function openEditKaryawanModal(nik) {
+  const k = karyawanByNik[nik];
+  if (!k) { toast('Data karyawan tidak ditemukan, coba refresh daftar.', 'error'); return; }
+  document.getElementById('ek-nik-hidden').value = k.nik;
+  document.getElementById('ek-nik').value = k.nik;
+  document.getElementById('ek-nama').value = k.nama || '';
+  document.getElementById('ek-alamat').value = k.alamat || '';
+  document.getElementById('ek-tempatlahir').value = k.tempatLahir || '';
+  document.getElementById('ek-tanggallahir').value = k.tanggalLahir || '';
+  document.getElementById('ek-departemen').value = k.departemen || '';
+  document.getElementById('ek-jabatan').value = k.jabatan || '';
+  document.getElementById('ek-keterangan').value = k.keterangan || '';
+  document.getElementById('edit-karyawan-modal').classList.remove('hidden');
+}
+function closeEditKaryawanModal() { document.getElementById('edit-karyawan-modal').classList.add('hidden'); }
+function saveEditKaryawan() {
+  const payload = {
+    nik: document.getElementById('ek-nik-hidden').value,
+    nama: document.getElementById('ek-nama').value.trim(),
+    alamat: document.getElementById('ek-alamat').value.trim(),
+    tempatLahir: document.getElementById('ek-tempatlahir').value.trim(),
+    tanggalLahir: document.getElementById('ek-tanggallahir').value,
+    departemen: document.getElementById('ek-departemen').value.trim(),
+    jabatan: document.getElementById('ek-jabatan').value.trim(),
+    keterangan: document.getElementById('ek-keterangan').value.trim()
+  };
+  showLoading('Menyimpan perubahan...');
+  callServer('updateKaryawan', payload).then(res => {
+    hideLoading();
+    toast(res.message, res.success ? 'success' : 'error');
+    if (res.success) { closeEditKaryawanModal(); loadKaryawanList(); }
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+
+/** Fills a <select id="..."> with "NIK - Nama" options from the employee list. */
+function populateKaryawanSelect_(selectId) {
+  callServer('getAllKaryawan', {}).then(res => {
+    if (!res.success) return;
+    const sel = document.getElementById(selectId);
+    const currentVal = sel.value;
+    const firstOption = sel.querySelector('option');
+    sel.innerHTML = '';
+    if (firstOption) sel.appendChild(firstOption);
+    res.data.forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k.nik;
+      opt.textContent = k.nik + ' - ' + k.nama;
+      sel.appendChild(opt);
+    });
+    if (currentVal) sel.value = currentVal;
+  });
+}
+
+// ============================================================
+// REKRUTMEN
+// ============================================================
+let lowonganById = {};
+function loadLowonganList() {
+  callServer('getLowonganList', {}).then(res => {
+    if (!res.success) return;
+    lowonganById = {};
+    const body = document.getElementById('lowongan-table-body');
+    body.innerHTML = '';
+    const filterSel = document.getElementById('pelamar-filter-lowongan');
+    const currentFilterVal = filterSel.value;
+    filterSel.innerHTML = '<option value="">Semua Lowongan</option>';
+    res.data.forEach(l => {
+      lowonganById[l.id] = l;
+      const opt = document.createElement('option');
+      opt.value = l.id; opt.textContent = l.posisi;
+      filterSel.appendChild(opt);
+
+      const jumlahPelamar = (window._pelamarCountByLowongan && window._pelamarCountByLowongan[l.id]) || 0;
+      const tr = document.createElement('tr');
+      tr.className = 'border-b last:border-0';
+      const statusBadge = l.status === 'Buka'
+        ? '<span class="text-emerald-600 font-medium">Buka</span>'
+        : '<span class="text-slate-400">Tutup</span>';
+      tr.innerHTML = `<td class="py-2 pr-3 font-medium text-navy-700">${l.posisi}</td><td class="pr-3">${l.departemen||'-'}</td>
+        <td class="pr-3">${l.jenis||'-'}</td><td class="pr-3">${statusBadge}</td><td class="pr-3">${l.tanggalTutup||'-'}</td>
+        <td class="pr-3">${jumlahPelamar}</td>
+        <td class="whitespace-nowrap">
+          <button class="text-navy-700 text-xs font-medium mr-2" onclick="toggleLowonganStatusAdmin('${l.id}','${l.status}')">${l.status === 'Buka' ? 'Tutup' : 'Buka Lagi'}</button>
+          <button class="text-red-500 text-xs" onclick="deleteLowonganAdmin('${l.id}')">Hapus</button>
+        </td>`;
+      body.appendChild(tr);
+    });
+    if (currentFilterVal) filterSel.value = currentFilterVal;
+  }).catch(err => toast('Gagal memuat lowongan: ' + err.message, 'error'));
+}
+function addLowonganAdmin() {
+  const payload = {
+    posisi: document.getElementById('low-posisi').value.trim(),
+    departemen: document.getElementById('low-departemen').value.trim(),
+    jenis: document.getElementById('low-jenis').value,
+    tanggalTutup: document.getElementById('low-tanggaltutup').value,
+    deskripsi: document.getElementById('low-deskripsi').value.trim(),
+    kualifikasi: document.getElementById('low-kualifikasi').value.trim()
+  };
+  if (!payload.posisi) { toast('Nama posisi wajib diisi.', 'error'); return; }
+  showLoading('Menyimpan lowongan...');
+  callServer('addLowongan', payload).then(res => {
+    hideLoading();
+    toast(res.message, res.success ? 'success' : 'error');
+    if (res.success) {
+      ['low-posisi','low-departemen','low-tanggaltutup','low-deskripsi','low-kualifikasi'].forEach(id => document.getElementById(id).value = '');
+      loadLowonganList();
+    }
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+function toggleLowonganStatusAdmin(id, currentStatus) {
+  const newStatus = currentStatus === 'Buka' ? 'Tutup' : 'Buka';
+  callServer('updateLowongan', { id, status: newStatus }).then(res => { toast(res.message, res.success ? 'success' : 'error'); loadLowonganList(); });
+}
+function deleteLowonganAdmin(id) {
+  if (!confirm('Hapus lowongan ini beserta relasinya?')) return;
+  callServer('deleteLowongan', { id }).then(res => { toast(res.message, res.success ? 'success' : 'error'); loadLowonganList(); });
+}
+
+function loadPelamarList() {
+  const lowonganId = document.getElementById('pelamar-filter-lowongan').value;
+  callServer('getPelamarList', lowonganId ? { lowonganId } : {}).then(res => {
+    if (!res.success) return;
+    const body = document.getElementById('pelamar-table-body');
+    body.innerHTML = '';
+    window._pelamarCountByLowongan = {};
+    res.data.forEach(p => { window._pelamarCountByLowongan[p.lowonganId] = (window._pelamarCountByLowongan[p.lowonganId] || 0) + 1; });
+    const statusOptions = ['Baru','Diproses','Interview','Diterima','Ditolak'];
+    res.data.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b last:border-0';
+      const cvLink = p.cvUrl ? `<a href="${p.cvUrl}" target="_blank" rel="noopener" class="text-emerald-600 underline">Lihat CV</a>` : '-';
+      const opts = statusOptions.map(s => `<option value="${s}" ${s===p.status?'selected':''}>${s}</option>`).join('');
+      tr.innerHTML = `<td class="py-2 pr-3 font-medium text-navy-700">${p.nama}</td><td class="pr-3">${p.posisi}</td>
+        <td class="pr-3 text-xs">${p.email||'-'}<br>${p.noHp||''}</td><td class="pr-3">${cvLink}</td>
+        <td class="pr-3"><select class="border border-slate-300 rounded px-2 py-1 text-xs" onchange="updatePelamarStatusAdmin('${p.id}', this.value)">${opts}</select></td>
+        <td><button class="text-red-500 text-xs" onclick="deletePelamarAdmin('${p.id}')">Hapus</button></td>`;
+      body.appendChild(tr);
+    });
+    loadLowonganList(); // refresh jumlah pelamar per lowongan
+  }).catch(err => toast('Gagal memuat pelamar: ' + err.message, 'error'));
+}
+function updatePelamarStatusAdmin(id, status) {
+  callServer('updatePelamarStatus', { id, status }).then(res => toast(res.message, res.success ? 'success' : 'error'));
+}
+function deletePelamarAdmin(id) {
+  if (!confirm('Hapus data pelamar ini?')) return;
+  callServer('deletePelamar', { id }).then(res => { toast(res.message, res.success ? 'success' : 'error'); loadPelamarList(); });
+}
+
+// ---- Rekrutmen: sisi publik (lowongan & lamar kerja) ----
+function loadLowonganPublicList() {
+  showLoading('Memuat lowongan...');
+  callServer('getLowonganList', {}).then(res => {
+    hideLoading();
+    const list = document.getElementById('lp-list');
+    list.innerHTML = '';
+    if (!res.success) return;
+    const buka = res.data.filter(l => l.status === 'Buka');
+    if (!buka.length) { list.innerHTML = '<p class="text-slate-400 text-center py-6">Belum ada lowongan yang dibuka saat ini.</p>'; return; }
+    buka.forEach(l => {
+      const div = document.createElement('div');
+      div.className = 'border border-slate-200 rounded-xl p-4';
+      div.innerHTML = `<div class="flex items-center justify-between">
+          <div><p class="font-bold text-navy-800">${l.posisi}</p><p class="text-xs text-slate-400">${l.departemen||'-'} • ${l.jenis||'-'}${l.tanggalTutup ? ' • Tutup: '+l.tanggalTutup : ''}</p></div>
+          <button class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium" onclick="openApplyModal('${l.id}', '${l.posisi.replace(/'/g,"\\'")}')">Lamar</button>
+        </div>
+        ${l.deskripsi ? `<p class="text-sm text-slate-600 mt-2">${l.deskripsi}</p>` : ''}
+        ${l.kualifikasi ? `<p class="text-xs text-slate-400 mt-1"><strong>Kualifikasi:</strong> ${l.kualifikasi}</p>` : ''}`;
+      list.appendChild(div);
+    });
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+function openApplyModal(lowonganId, posisi) {
+  document.getElementById('apply-lowongan-id').value = lowonganId;
+  document.getElementById('apply-posisi').value = posisi;
+  document.getElementById('apply-posisi-label').textContent = posisi;
+  ['apply-nama','apply-email','apply-nohp','apply-pendidikan','apply-pengalaman'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('apply-cv').value = '';
+  document.getElementById('apply-modal').classList.remove('hidden');
+}
+function closeApplyModal() { document.getElementById('apply-modal').classList.add('hidden'); }
+function submitLamaran() {
+  const payload = {
+    lowonganId: document.getElementById('apply-lowongan-id').value,
+    posisi: document.getElementById('apply-posisi').value,
+    nama: document.getElementById('apply-nama').value.trim(),
+    email: document.getElementById('apply-email').value.trim(),
+    noHp: document.getElementById('apply-nohp').value.trim(),
+    pendidikan: document.getElementById('apply-pendidikan').value.trim(),
+    pengalaman: document.getElementById('apply-pengalaman').value.trim()
+  };
+  if (!payload.nama) { toast('Nama wajib diisi.', 'error'); return; }
+  const cvFile = document.getElementById('apply-cv').files[0];
+  const doSubmit = () => {
+    showLoading('Mengirim lamaran...');
+    callServer('addPelamar', payload).then(res => {
+      hideLoading();
+      toast(res.message, res.success ? 'success' : 'error');
+      if (res.success) closeApplyModal();
+    }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+  };
+  if (cvFile) {
+    const reader = new FileReader();
+    reader.onload = e => { payload.cvBase64 = e.target.result; payload.cvFileName = cvFile.name; doSubmit(); };
+    reader.readAsDataURL(cvFile);
+  } else {
+    doSubmit();
+  }
+}
+
+// ============================================================
+// CUTI & IZIN
+// ============================================================
+function loadCutiList() {
+  const status = document.getElementById('cuti-filter-status').value;
+  callServer('getCutiList', status ? { status } : {}).then(res => {
+    if (!res.success) return;
+    const body = document.getElementById('cuti-table-body');
+    body.innerHTML = '';
+    const statusColor = { Menunggu: 'text-amber-600', Disetujui: 'text-emerald-600', Ditolak: 'text-red-500' };
+    res.data.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b last:border-0';
+      let actionCell = '-';
+      if (c.status === 'Menunggu') {
+        actionCell = `<button class="text-emerald-600 text-xs font-medium mr-2" onclick="updateCutiStatusAdmin('${c.id}','Disetujui')">✔ Setujui</button>
+          <button class="text-red-500 text-xs font-medium mr-2" onclick="updateCutiStatusAdmin('${c.id}','Ditolak')">✘ Tolak</button>`;
+      }
+      actionCell += `<button class="text-slate-400 text-xs" onclick="deleteCutiAdmin('${c.id}')">Hapus</button>`;
+      tr.innerHTML = `<td class="py-2 pr-3 font-medium text-navy-700">${c.nama}</td><td class="pr-3">${c.jenis}</td>
+        <td class="pr-3 text-xs">${c.tanggalMulai} s/d ${c.tanggalSelesai}</td><td class="pr-3">${c.jumlahHari}</td>
+        <td class="pr-3 text-xs">${c.alasan||'-'}</td><td class="pr-3 font-medium ${statusColor[c.status]||''}">${c.status}</td>
+        <td class="whitespace-nowrap">${actionCell}</td>`;
+      body.appendChild(tr);
+    });
+  }).catch(err => toast('Gagal memuat pengajuan: ' + err.message, 'error'));
+}
+function updateCutiStatusAdmin(id, status) {
+  const catatanAdmin = status === 'Ditolak' ? (prompt('Catatan penolakan (opsional):') || '') : '';
+  showLoading('Memperbarui status...');
+  callServer('updateCutiStatus', { id, status, catatanAdmin }).then(res => {
+    hideLoading();
+    toast(res.message, res.success ? 'success' : 'error');
+    loadCutiList();
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+function deleteCutiAdmin(id) {
+  if (!confirm('Hapus pengajuan ini?')) return;
+  callServer('deleteCuti', { id }).then(res => { toast(res.message, res.success ? 'success' : 'error'); loadCutiList(); });
+}
+
+// ---- Cuti & Izin: sisi karyawan (self-service) ----
+function loadCutiSayaList() {
+  const nik = document.getElementById('cs-nik').value.trim();
+  if (!nik) { document.getElementById('cs-kuota-box').classList.add('hidden'); document.getElementById('cs-list').innerHTML = ''; return; }
+  callServer('getSisaCuti', { nik }).then(res => {
+    const box = document.getElementById('cs-kuota-box');
+    if (res.success) {
+      box.classList.remove('hidden');
+      box.textContent = `Kuota Cuti Tahunan ${new Date().getFullYear()}: ${res.data.kuota} hari — Terpakai: ${res.data.terpakai} hari — Sisa: ${res.data.sisa} hari.`;
+    }
+  });
+  callServer('getCutiList', { nik }).then(res => {
+    const list = document.getElementById('cs-list');
+    list.innerHTML = '';
+    if (!res.success || !res.data.length) { list.innerHTML = '<p class="text-slate-400 text-center py-4">Belum ada pengajuan.</p>'; return; }
+    const statusColor = { Menunggu: 'text-amber-600', Disetujui: 'text-emerald-600', Ditolak: 'text-red-500' };
+    res.data.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'border border-slate-200 rounded-lg p-3';
+      div.innerHTML = `<div class="flex justify-between items-center">
+          <p class="font-medium text-navy-700">${c.jenis} — ${c.tanggalMulai} s/d ${c.tanggalSelesai}</p>
+          <span class="text-xs font-semibold ${statusColor[c.status]||''}">${c.status}</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-1">${c.jumlahHari} hari • ${c.alasan||'-'}</p>`;
+      list.appendChild(div);
+    });
+  }).catch(err => toast('Gagal: ' + err.message, 'error'));
+}
+function submitCutiSaya() {
+  const nik = document.getElementById('cs-nik').value.trim();
+  const payload = {
+    nik,
+    jenis: document.getElementById('cs-jenis').value,
+    tanggalMulai: document.getElementById('cs-mulai').value,
+    tanggalSelesai: document.getElementById('cs-selesai').value,
+    alasan: document.getElementById('cs-alasan').value.trim()
+  };
+  if (!nik) { toast('Masukkan NIK terlebih dahulu.', 'error'); return; }
+  if (!payload.tanggalMulai || !payload.tanggalSelesai) { toast('Tanggal mulai dan selesai wajib diisi.', 'error'); return; }
+  showLoading('Mengirim pengajuan...');
+  callServer('ajukanCuti', payload).then(res => {
+    hideLoading();
+    toast(res.message, res.success ? 'success' : 'error');
+    if (res.success) {
+      document.getElementById('cs-mulai').value = '';
+      document.getElementById('cs-selesai').value = '';
+      document.getElementById('cs-alasan').value = '';
+      loadCutiSayaList();
+    }
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+
+// ============================================================
+// PAYROLL
+// ============================================================
+function loadGajiKaryawanForm() {
+  const nik = document.getElementById('gaji-nik').value;
+  ['gaji-pokok','gaji-tunjangan-jabatan','gaji-tunjangan-transport','gaji-tunjangan-makan','gaji-potongan-bpjs','gaji-potongan-lain'].forEach(id => document.getElementById(id).value = '');
+  if (!nik) return;
+  callServer('getGajiKaryawan', { nik }).then(res => {
+    if (!res.success || !res.data) return;
+    const g = res.data;
+    document.getElementById('gaji-pokok').value = g.gajiPokok || '';
+    document.getElementById('gaji-tunjangan-jabatan').value = g.tunjanganJabatan || '';
+    document.getElementById('gaji-tunjangan-transport').value = g.tunjanganTransport || '';
+    document.getElementById('gaji-tunjangan-makan').value = g.tunjanganMakan || '';
+    document.getElementById('gaji-potongan-bpjs').value = g.potonganBpjs || '';
+    document.getElementById('gaji-potongan-lain').value = g.potonganLain || '';
+  });
+}
+function saveGajiKaryawanAdmin() {
+  const nik = document.getElementById('gaji-nik').value;
+  if (!nik) { toast('Pilih karyawan terlebih dahulu.', 'error'); return; }
+  const payload = {
+    nik,
+    gajiPokok: document.getElementById('gaji-pokok').value,
+    tunjanganJabatan: document.getElementById('gaji-tunjangan-jabatan').value,
+    tunjanganTransport: document.getElementById('gaji-tunjangan-transport').value,
+    tunjanganMakan: document.getElementById('gaji-tunjangan-makan').value,
+    potonganBpjs: document.getElementById('gaji-potongan-bpjs').value,
+    potonganLain: document.getElementById('gaji-potongan-lain').value
+  };
+  showLoading('Menyimpan komponen gaji...');
+  callServer('saveGajiKaryawan', payload).then(res => { hideLoading(); toast(res.message, res.success ? 'success' : 'error'); })
+    .catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+function generatePayrollAdmin() {
+  const periode = document.getElementById('payroll-periode').value;
+  if (!periode) { toast('Pilih periode terlebih dahulu.', 'error'); return; }
+  showLoading('Menggenerate payroll ' + periode + '...');
+  callServer('generatePayroll', { periode }).then(res => {
+    hideLoading();
+    toast(res.message, res.success ? 'success' : 'error');
+    if (res.success) loadPayrollList();
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+let lastPayrollData = [];
+function loadPayrollList() {
+  const periode = document.getElementById('payroll-periode').value;
+  callServer('getPayrollList', periode ? { periode } : {}).then(res => {
+    if (!res.success) return;
+    lastPayrollData = res.data;
+    const body = document.getElementById('payroll-table-body');
+    body.innerHTML = '';
+    const fmt = n => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+    res.data.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b last:border-0';
+      const statusSel = `<select class="border border-slate-300 rounded px-2 py-1 text-xs" onchange="updatePayrollStatusAdmin('${p.id}', this.value)">
+          <option value="Draft" ${p.status==='Draft'?'selected':''}>Draft</option>
+          <option value="Dibayar" ${p.status==='Dibayar'?'selected':''}>Dibayar</option>
+        </select>`;
+      tr.innerHTML = `<td class="py-2 pr-3">${p.periode}</td><td class="pr-3 font-medium text-navy-700">${p.nama}</td><td class="pr-3">${p.departemen}</td>
+        <td class="pr-3">${fmt(p.gajiPokok)}</td><td class="pr-3">${fmt(p.totalTunjangan)}</td>
+        <td class="pr-3">${p.hariHadir}/${p.hariKerja}</td><td class="pr-3">${fmt(p.totalPotongan)}</td>
+        <td class="pr-3 font-semibold text-emerald-700">${fmt(p.gajiBersih)}</td><td class="pr-3">${statusSel}</td>
+        <td><button class="text-red-500 text-xs" onclick="deletePayrollAdmin('${p.id}')">Hapus</button></td>`;
+      body.appendChild(tr);
+    });
+  }).catch(err => toast('Gagal memuat payroll: ' + err.message, 'error'));
+}
+function updatePayrollStatusAdmin(id, status) {
+  callServer('updatePayrollStatus', { id, status }).then(res => toast(res.message, res.success ? 'success' : 'error'));
+}
+function deletePayrollAdmin(id) {
+  if (!confirm('Hapus slip payroll ini?')) return;
+  callServer('deletePayroll', { id }).then(res => { toast(res.message, res.success ? 'success' : 'error'); loadPayrollList(); });
+}
+function exportPayrollExcel() {
+  if (!lastPayrollData.length) { toast('Tidak ada data payroll untuk diexport. Tampilkan dahulu.', 'error'); return; }
+  const ws = XLSX.utils.json_to_sheet(lastPayrollData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Payroll');
+  XLSX.writeFile(wb, 'Payroll_HDIR_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+// ============================================================
+// PERFORMANCE
+// ============================================================
+function addPerformanceAdmin() {
+  const payload = {
+    nik: document.getElementById('prf-nik').value,
+    periode: document.getElementById('prf-periode').value.trim(),
+    target: document.getElementById('prf-target').value.trim(),
+    pencapaian: document.getElementById('prf-pencapaian').value.trim(),
+    nilai: document.getElementById('prf-nilai').value,
+    penilai: document.getElementById('prf-penilai').value.trim(),
+    catatan: document.getElementById('prf-catatan').value.trim()
+  };
+  if (!payload.nik) { toast('Pilih karyawan terlebih dahulu.', 'error'); return; }
+  showLoading('Menyimpan penilaian...');
+  callServer('addPerformance', payload).then(res => {
+    hideLoading();
+    toast(res.message, res.success ? 'success' : 'error');
+    if (res.success) {
+      ['prf-periode','prf-target','prf-pencapaian','prf-nilai','prf-penilai','prf-catatan'].forEach(id => document.getElementById(id).value = '');
+      loadPerformanceList();
+    }
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+function loadPerformanceList() {
+  callServer('getPerformanceList', {}).then(res => {
+    if (!res.success) return;
+    const body = document.getElementById('performance-table-body');
+    body.innerHTML = '';
+    const kategoriColor = { 'Sangat Baik': 'text-emerald-600', 'Baik': 'text-navy-600', 'Cukup': 'text-amber-600', 'Kurang': 'text-red-500' };
+    res.data.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b last:border-0';
+      tr.innerHTML = `<td class="py-2 pr-3 font-medium text-navy-700">${p.nama}</td><td class="pr-3">${p.periode}</td>
+        <td class="pr-3">${p.nilai}</td><td class="pr-3 font-medium ${kategoriColor[p.kategori]||''}">${p.kategori}</td>
+        <td class="pr-3">${p.penilai||'-'}</td><td><button class="text-red-500 text-xs" onclick="deletePerformanceAdmin('${p.id}')">Hapus</button></td>`;
+      body.appendChild(tr);
+    });
+  }).catch(err => toast('Gagal memuat penilaian: ' + err.message, 'error'));
+}
+function deletePerformanceAdmin(id) {
+  if (!confirm('Hapus data penilaian ini?')) return;
+  callServer('deletePerformance', { id }).then(res => { toast(res.message, res.success ? 'success' : 'error'); loadPerformanceList(); });
+}
+
+// ============================================================
+// LAPORAN HR (ringkasan lintas-modul)
+// ============================================================
+let lastLaporanHRData = null;
+function loadLaporanHR() {
+  const startDate = document.getElementById('hr-start-date').value;
+  const endDate = document.getElementById('hr-end-date').value;
+  const periode = document.getElementById('hr-periode').value;
+  const params = {};
+  if (startDate && endDate) { params.startDate = startDate; params.endDate = endDate; } else { params.filter = 'bulan_ini'; }
+  if (periode) params.periode = periode;
+
+  showLoading('Memuat laporan HR...');
+  callServer('getLaporanHR', params).then(res => {
+    hideLoading();
+    const container = document.getElementById('laporanhr-content');
+    container.innerHTML = '';
+    if (!res.success) { toast(res.message, 'error'); return; }
+    lastLaporanHRData = res.data;
+    const d = res.data;
+    const fmt = n => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+    const cards = [
+      { title: '👥 Karyawan', rows: [['Total Karyawan', d.totalKaryawan], ['Total Departemen', d.totalDepartemen]] },
+      { title: '🕘 Absensi (' + res.range.start + ' s/d ' + res.range.end + ')', rows: [['Hadir', d.absensi.hadir], ['Izin', d.absensi.izin], ['Cuti', d.absensi.cuti], ['WFH', d.absensi.wfh]] },
+      { title: '📅 Cuti & Izin', rows: [['Menunggu', d.cuti.menunggu], ['Disetujui', d.cuti.disetujui], ['Ditolak', d.cuti.ditolak], ['Total Pengajuan', d.cuti.total]] },
+      { title: '💰 Payroll (' + d.payroll.periode + ')', rows: [['Jumlah Slip', d.payroll.jumlahSlip], ['Total Gaji Bersih', fmt(d.payroll.totalGajiBersih)]] },
+      { title: '📈 Performance (' + d.performance.periode + ')', rows: [['Jumlah Penilaian', d.performance.jumlahPenilaian], ['Rata-rata Nilai', d.performance.rataRataNilai]] },
+      { title: '🧑‍💼 Rekrutmen', rows: [['Lowongan Aktif', d.rekrutmen.lowonganAktif], ['Pelamar Baru', d.rekrutmen.pelamarBaru]] }
+    ];
+    cards.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'bg-white rounded-2xl shadow p-5';
+      div.innerHTML = `<h3 class="font-semibold text-navy-700 mb-3">${c.title}</h3>` +
+        c.rows.map(r => `<div class="flex justify-between text-sm py-1 border-b last:border-0 border-slate-100"><span class="text-slate-500">${r[0]}</span><span class="font-medium text-navy-800">${r[1]}</span></div>`).join('');
+      container.appendChild(div);
+    });
+  }).catch(err => { hideLoading(); toast('Gagal: ' + err.message, 'error'); });
+}
+function exportLaporanHRExcel() {
+  if (!lastLaporanHRData) { toast('Tampilkan laporan terlebih dahulu.', 'error'); return; }
+  const d = lastLaporanHRData;
+  const rows = [
+    { Kategori: 'Total Karyawan', Nilai: d.totalKaryawan },
+    { Kategori: 'Total Departemen', Nilai: d.totalDepartemen },
+    { Kategori: 'Absensi - Hadir', Nilai: d.absensi.hadir },
+    { Kategori: 'Absensi - Izin', Nilai: d.absensi.izin },
+    { Kategori: 'Absensi - Cuti', Nilai: d.absensi.cuti },
+    { Kategori: 'Absensi - WFH', Nilai: d.absensi.wfh },
+    { Kategori: 'Cuti - Menunggu', Nilai: d.cuti.menunggu },
+    { Kategori: 'Cuti - Disetujui', Nilai: d.cuti.disetujui },
+    { Kategori: 'Cuti - Ditolak', Nilai: d.cuti.ditolak },
+    { Kategori: 'Payroll - Jumlah Slip (' + d.payroll.periode + ')', Nilai: d.payroll.jumlahSlip },
+    { Kategori: 'Payroll - Total Gaji Bersih', Nilai: d.payroll.totalGajiBersih },
+    { Kategori: 'Performance - Jumlah Penilaian (' + d.performance.periode + ')', Nilai: d.performance.jumlahPenilaian },
+    { Kategori: 'Performance - Rata-rata Nilai', Nilai: d.performance.rataRataNilai },
+    { Kategori: 'Rekrutmen - Lowongan Aktif', Nilai: d.rekrutmen.lowonganAktif },
+    { Kategori: 'Rekrutmen - Pelamar Baru', Nilai: d.rekrutmen.pelamarBaru }
+  ];
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Laporan HR');
+  XLSX.writeFile(wb, 'Laporan_HR_HDIR_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 </script>
 </body>
